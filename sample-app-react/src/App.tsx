@@ -1,28 +1,28 @@
 import { useState, type FC } from "react";
 import "@/App.css";
-import { $gender, $users, type User } from "@/stores/users";
+import { $gender, $posts, type Post } from "@/stores/posts";
 import useAtom from "@/hooks/useAtom";
 import logo from "@/assets/react.svg";
 
 const UserItem: FC<{
-  user: User;
-  onEdit: (id: number, userName: User["name"]) => void;
+  post: Post;
+  onEdit: (id: number, postTitle: Post["title"]) => void;
   onDelete: (id: number) => void;
-}> = ({ user, onEdit, onDelete }) => {
+}> = ({ post, onEdit, onDelete }) => {
   const [gender, setGender] = useAtom($gender);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editValue, setEditValue] = useState<User["name"]>(user.name);
+  const [editValue, setEditValue] = useState<Post["title"]>(post.title);
 
   const onSaveClick = () => {
     if (editValue.trim() !== "") {
-      onEdit(user.id, editValue.trim());
+      onEdit(post.id, editValue.trim());
       setIsEditing(false);
     }
   };
 
   const onCancelClick = () => {
-    setEditValue(user.name);
+    setEditValue(post.title);
     setIsEditing(false);
   };
 
@@ -55,7 +55,7 @@ const UserItem: FC<{
             onDoubleClick={() => setIsEditing(true)}
             onClick={() => setGender(gender === "M" ? "F" : "M")}
           >
-            {gender}:{user.name}
+            {gender}:{post.title}
           </span>
           <div className="user-actions">
             <button
@@ -65,7 +65,7 @@ const UserItem: FC<{
               수정
             </button>
             <button
-              onClick={() => onDelete(user.id)}
+              onClick={() => onDelete(post.id)}
               className="user-delete-btn"
             >
               삭제
@@ -78,7 +78,7 @@ const UserItem: FC<{
 };
 
 const App = () => {
-  const [users, setUsers] = useAtom($users);
+  const [posts, setPosts] = useAtom($posts);
   const [inputValue, setInputValue] = useState("");
 
   console.log(123);
@@ -87,12 +87,14 @@ const App = () => {
   const handleAdd = () => {
     if (inputValue.trim() === "") return;
 
-    const newUser = {
-      id: users.length > 0 ? Math.max(...users.map((u) => u.id)) + 1 : 1,
-      name: inputValue.trim(),
+    const newPost = {
+      id: posts.length > 0 ? Math.max(...posts.map((p) => p.id)) + 1 : 1,
+      title: inputValue.trim(),
+      body: "body",
+      userId: 1,
     };
 
-    setUsers([...users, newUser]);
+    setPosts([...posts, newPost]);
     setInputValue("");
   };
 
@@ -100,16 +102,16 @@ const App = () => {
   const handleEdit = (id: number, newName: string) => {
     if (newName.trim() === "") return;
 
-    setUsers(
-      users.map((user) =>
-        user.id === id ? { ...user, name: newName.trim() } : user
+    setPosts(
+      posts.map((post) =>
+        post.id === id ? { ...post, title: newName.trim() } : post
       )
     );
   };
 
   // Delete - User 삭제
   const handleDelete = (id: number) => {
-    setUsers(users.filter((user) => user.id !== id));
+    setPosts(posts.filter((post) => post.id !== id));
   };
 
   return (
@@ -134,13 +136,13 @@ const App = () => {
 
       {/* Read */}
       <ul className="user-list">
-        {users.length === 0 ? (
+        {posts.length === 0 ? (
           <li className="user-empty">사용자가 없습니다.</li>
         ) : (
-          users.map((user) => (
+          posts.map((post) => (
             <UserItem
-              key={user.id}
-              user={user}
+              key={post.id}
+              post={post}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
@@ -148,8 +150,8 @@ const App = () => {
         )}
       </ul>
 
-      {users.length > 0 && (
-        <div className="user-stats">전체: {users.length}명</div>
+      {posts.length > 0 && (
+        <div className="user-stats">전체: {posts.length}개</div>
       )}
     </main>
   );

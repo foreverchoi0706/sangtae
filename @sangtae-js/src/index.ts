@@ -21,6 +21,30 @@ export const createAtom = <T>(initialValue: T): Atom<T> => {
   };
 };
 
+export const createDerivedAtom = <T>(
+  callback: (get: <U>(atom: Atom<U>) => U) => T
+) => {
+  const dependencies = new Set<Atom<unknown>>();
+
+  const initialValue = callback((atom) => {
+    dependencies.add(atom as Atom<unknown>);
+    return atom[VALUE];
+  });
+  const derivedAtom = {
+    [VALUE]: initialValue,
+    [LISTENERS]: null,
+  };
+  dependencies.forEach((dependency) => {
+    subscribe(dependency, () => {
+      const newValue = callback(get);
+      if (!Object.is(derivedAtom[VALUE], newValue)) {
+        derivedAtom[VALUE] = newValue;
+      }
+    });
+  });
+  return derivedAtom;
+};
+
 export const get = <T>(atom: Atom<T>): T => atom[VALUE];
 
 export const set = <T>(atom: Atom<T>, newValue: T) => {

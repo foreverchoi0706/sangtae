@@ -4,24 +4,54 @@ var LISTENERS = Symbol("ATOM_LISTENERS");
 var createAtom = (initialValue) => {
   return {
     [VALUE]: initialValue,
-    [LISTENERS]: /* @__PURE__ */ new Set()
+    [LISTENERS]: null
   };
 };
-var get = (atom) => {
-  return atom[VALUE];
+var createDerivedAtom = (callback) => {
+  const dependencies = /* @__PURE__ */ new Set();
+  const initialValue = callback((atom) => {
+    dependencies.add(atom);
+    return atom[VALUE];
+  });
+  const derivedAtom = {
+    [VALUE]: initialValue,
+    [LISTENERS]: null
+  };
+  dependencies.forEach((dependency) => {
+    subscribe(dependency, () => {
+      const newValue = callback(get);
+      if (!Object.is(derivedAtom[VALUE], newValue)) {
+        derivedAtom[VALUE] = newValue;
+      }
+    });
+  });
+  return derivedAtom;
 };
+var get = (atom) => atom[VALUE];
 var set = (atom, newValue) => {
   if (Object.is(atom[VALUE], newValue)) return;
   atom[VALUE] = newValue;
-  atom[LISTENERS].forEach((listener) => listener(newValue));
-};
-function subscribe(atom, callback) {
   const listeners = atom[LISTENERS];
+  if (listeners !== null) listeners.forEach((listener) => listener(newValue));
+};
+var subscribe = (atom, callback) => {
+  let listeners = atom[LISTENERS];
+  if (listeners === null) {
+    listeners = /* @__PURE__ */ new Set();
+    atom[LISTENERS] = listeners;
+  }
   listeners.add(callback);
   callback(atom[VALUE]);
-  return () => listeners.delete(callback);
-}
+  return () => {
+    const currentListeners = atom[LISTENERS];
+    if (currentListeners === null) return;
+    currentListeners.delete(callback);
+    if (currentListeners.size === 0) {
+      atom[LISTENERS] = null;
+    }
+  };
+};
 
-export { createAtom, get, set, subscribe };
+export { createAtom, createDerivedAtom, get, set, subscribe };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

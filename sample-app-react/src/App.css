@@ -32,13 +32,14 @@ h1 {
 /* Create - Input */
 .user-input {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
 }
 
 .user-input-field {
-  flex: 1;
+  width: 100%;
   max-width: 400px;
   padding: 0.75rem;
   border: 2px solid #ddd;
@@ -53,6 +54,8 @@ h1 {
 }
 
 .user-add-btn {
+  width: 100%;
+  max-width: 400px;
   padding: 0.75rem 1.5rem;
   background: #646cff;
   color: white;
