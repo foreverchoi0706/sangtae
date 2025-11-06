@@ -1,0 +1,25 @@
+{
+  "name": "sangtae-js",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build-watch": "tsup --watch"
+  },
+  "author": "foreverchoi0706",
+  "license": "ISC",
+  "description": "Minimal Global State Management Library",
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  }
+}
