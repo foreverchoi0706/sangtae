@@ -17,7 +17,7 @@ export type Atom<T> = Readonly<InternalAtom<T>>;
 /**
  * @description 초기값을 받아 새로운 atom을 생성합니다
  * @param {T} initialValue
- * @returns {Atom<T>}
+ * @returns {Atom<T>} 아톰 객체
  */
 export const createAtom = <T>(initialValue: T): Atom<T> => {
   return {
@@ -64,7 +64,7 @@ export const createDerivedAtom = <T>(
 const asyncAtomCache = new WeakMap<Promise<any>, Atom<any>>();
 
 /**
- * @description promise를 받아 Suspense 대응 가능한 비동기 아톰을 생성합니다
+ * @description promise를 받아 비동기 아톰을 생성합니다
  * @param promise promise 객체
  * @returns {Atom<T>} 비동기 아톰 객체
  */
@@ -176,7 +176,7 @@ export const subscribe = <T>(atom: Atom<T>, callback: Listener<T>) => {
   }
 
   listeners.add(callback);
-  callback(atom[VALUE]);
+  // callback(atom[VALUE]);
 
   return () => {
     // atom에서 현재 listeners를 가져와서 실제 상태 확인

@@ -15,11 +15,9 @@
     "build": "npm run build --workspace=@sangtae-js",
     "build:watch": "npm run build-watch --workspace=@sangtae-js",
     "dev:react": "npm run dev --workspace=sample-app-react",
-    "dev:vue": "npm run dev --workspace=sample-app-vue",
-    "build:react": "npm run build --workspace=sample-app-react",
-    "build:vue": "npm run build --workspace=sample-app-vue"
+    "dev:vue": "npm run dev --workspace=sample-app-vue"
   },
-  "author": "",
+  "author": "foreverchoi0706",
   "license": "ISC",
   "description": "Monorepo for sangtae-js state management library"
 }

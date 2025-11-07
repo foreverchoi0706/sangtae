@@ -1,8 +1,10 @@
-import { Suspense, useRef, useState, type FC } from "react";
+import { Suspense, useEffect, useRef, useState, type FC } from "react";
 import "@/App.css";
-import { $gender, $posts, type Post } from "@/stores/posts";
+import { $a, $b, $c, $gender, $posts, type Post } from "@/stores/posts";
 import useAtom from "@/hooks/useAtom";
 import logo from "@/assets/react.svg";
+import { flushSync } from "react-dom";
+import { createAtom, get, set, subscribe } from "sangtae-js";
 
 const UserItem: FC<{
   post: Post;
@@ -112,6 +114,17 @@ const UserList = () => {
     setPosts(posts.filter((post) => post.id !== id));
   };
 
+  useEffect(() => {
+    const a = { id: 1 };
+    const atom = createAtom(a);
+
+    a.id = 2;
+    subscribe(atom, () => {
+      console.log(get(atom));
+    });
+    set(atom, a);
+  }, []);
+
   return (
     <>
       <div className="post-input">
@@ -145,12 +158,33 @@ const UserList = () => {
 };
 
 const App = () => {
+  const [a, setA] = useAtom($a);
+  const [b, setB] = useAtom($b);
+  const [c, setC] = useAtom($c);
+
   return (
     <main>
       <header className="header">
         <img src={logo} alt="logo" className="logo" />
-        <h1>POSTS</h1>
+        <h1>SAMPLE APP REACT</h1>
       </header>
+      <div>{a}</div>
+      <div>{b}</div>
+      <div>{c}</div>
+      <button onClick={() => setA(a + "AAAA")}>setA</button>
+      <button onClick={() => setB(b + "BBBB")}>setB</button>
+      <button onClick={() => setC(c + "CCCC")}>setC</button>
+      <button
+        onClick={() => {
+          flushSync(() => {
+            setA("AAAA");
+            setB("BBBB");
+          });
+          setC("CCCC");
+        }}
+      >
+        SET ALL
+      </button>
       <Suspense fallback={<div className="loading">LOADING...</div>}>
         <UserList />
       </Suspense>

@@ -1,6 +1,7 @@
 {
   "name": "sangtae-js",
   "version": "1.0.0",
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -12,14 +13,17 @@
     }
   },
   "scripts": {
-    "build": "tsup",
-    "build-watch": "tsup --watch"
+    "build": "npm run test:run && tsup",
+    "build-watch": "tsup --watch",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "author": "foreverchoi0706",
   "license": "ISC",
   "description": "Minimal Global State Management Library",
   "devDependencies": {
     "tsup": "^8.5.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
   }
 }

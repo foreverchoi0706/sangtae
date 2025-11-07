@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { useAtom } from "./hooks/useAtom";
-import { $posts, type Post } from "./stores/posts";
+import { $posts, $a, $b, $c, type Post } from "./stores/posts";
 import PostItem from "./components/PostItem.vue";
 import logo from "./assets/vue.svg";
 
 const isLoading = ref(true);
 const [posts, setPosts] = useAtom($posts);
+const [a, setA] = useAtom($a);
+const [b, setB] = useAtom($b);
+const [c, setC] = useAtom($c);
 const inputValue = ref<Post["title"]>("");
 const listRef = ref<HTMLUListElement | null>(null);
 
@@ -59,14 +62,32 @@ const onDeleteClick = (id: number) => {
   if (!posts.value) return;
   setPosts(posts.value.filter((post) => post.id !== id));
 };
+
+const onSetAClick = () => {
+  setA((a.value = a.value + "AAAA"));
+};
+
+const onSetBClick = () => {
+  setB((b.value = b.value + "BBBB"));
+};
+
+const onSetCClick = () => {
+  setC((c.value = c.value + "CCCC"));
+};
 </script>
 
 <template>
   <main>
     <header class="header">
       <img :src="logo" alt="logo" class="logo" />
-      <h1>POSTS</h1>
+      <h1>SAMPLE APP VUE</h1>
     </header>
+    <div>{{ a }}</div>
+    <div>{{ b }}</div>
+    <div>{{ c }}</div>
+    <button @click="onSetAClick">setA</button>
+    <button @click="onSetBClick">setB</button>
+    <button @click="onSetCClick">setC</button>
     <div v-if="isLoading" class="loading">LOADING...</div>
     <template v-else>
       <div class="post-input">

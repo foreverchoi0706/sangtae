@@ -1,4 +1,4 @@
-import { createAsyncAtom, createAtom, createDerivedAtom } from "sangtae-js";
+import { createAtom, createAsyncAtom, createDerivedAtom } from "sangtae-js";
 
 export interface User {
   id: number;
@@ -22,7 +22,7 @@ export const $gender = createAtom<string>("M");
 
 export const $a = createAtom("AAA");
 
-export const $b = createAtom(2);
+export const $b = createAtom("BBB");
 
 export const $c = createDerivedAtom((get) => {
   const A = get($a);

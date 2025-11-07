@@ -22,7 +22,7 @@ export const $gender = createAtom<string>("M");
 
 export const $a = createAtom("AAA");
 
-export const $b = createAtom(2);
+export const $b = createAtom("BBB");
 
 export const $c = createDerivedAtom((get) => {
   const A = get($a);
