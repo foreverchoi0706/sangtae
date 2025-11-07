@@ -1,4 +1,9 @@
-import { createAtom, createDerivedAtom } from "sangtae-js";
+import { createAsyncAtom, createAtom, createDerivedAtom } from "sangtae-js";
+
+export interface User {
+  id: number;
+  name: string;
+}
 
 export interface Post {
   userId: number;
@@ -7,20 +12,17 @@ export interface Post {
   body: string;
 }
 
-export const $posts = createAtom<Post[]>([
-  {
-    userId: 1,
-    id: 1,
-    title: "title 1",
-    body: "body 1",
-  },
-]);
+export const $user = createAtom<User>({ id: 1, name: "John Doe" });
+
+export const $posts = createAsyncAtom<Post[]>(
+  fetch("https://jsonplaceholder.typicode.com/posts").then((res) => res.json())
+);
 
 export const $gender = createAtom<string>("M");
 
 export const $a = createAtom("AAA");
 
-export const $b = createAtom("BBB");
+export const $b = createAtom(2);
 
 export const $c = createDerivedAtom((get) => {
   const A = get($a);

@@ -1,4 +1,4 @@
-import { useState, type FC } from "react";
+import { Suspense, useRef, useState, type FC } from "react";
 import "@/App.css";
 import { $gender, $posts, type Post } from "@/stores/posts";
 import useAtom from "@/hooks/useAtom";
@@ -10,7 +10,6 @@ const UserItem: FC<{
   onDelete: (id: number) => void;
 }> = ({ post, onEdit, onDelete }) => {
   const [gender, setGender] = useAtom($gender);
-
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editValue, setEditValue] = useState<Post["title"]>(post.title);
 
@@ -27,9 +26,9 @@ const UserItem: FC<{
   };
 
   return (
-    <li className="user-item">
+    <li className="post-item">
       {isEditing ? (
-        <div className="user-edit">
+        <div className="post-edit">
           <input
             type="text"
             value={editValue}
@@ -38,35 +37,35 @@ const UserItem: FC<{
               if (e.key === "Enter") onSaveClick();
               if (e.key === "Escape") onCancelClick();
             }}
-            className="user-edit-input"
+            className="post-edit-input"
             autoFocus
           />
-          <button onClick={onSaveClick} className="user-save-btn">
+          <button onClick={onSaveClick} className="post-save-btn">
             저장
           </button>
-          <button onClick={onCancelClick} className="user-cancel-btn">
+          <button onClick={onCancelClick} className="post-cancel-btn">
             취소
           </button>
         </div>
       ) : (
         <>
           <span
-            className="user-name"
+            className="post-name"
             onDoubleClick={() => setIsEditing(true)}
             onClick={() => setGender(gender === "M" ? "F" : "M")}
           >
             {gender}:{post.title}
           </span>
-          <div className="user-actions">
+          <div className="post-actions">
             <button
               onClick={() => setIsEditing(true)}
-              className="user-edit-btn"
+              className="post-edit-btn"
             >
               수정
             </button>
             <button
               onClick={() => onDelete(post.id)}
-              className="user-delete-btn"
+              className="post-delete-btn"
             >
               삭제
             </button>
@@ -77,14 +76,12 @@ const UserItem: FC<{
   );
 };
 
-const App = () => {
+const UserList = () => {
   const [posts, setPosts] = useAtom($posts);
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState<Post["title"]>("");
+  const listRef = useRef<HTMLUListElement>(null);
 
-  console.log(123);
-
-  // Create - User 추가
-  const handleAdd = () => {
+  const onAddClick = () => {
     if (inputValue.trim() === "") return;
 
     const newPost = {
@@ -94,12 +91,15 @@ const App = () => {
       userId: 1,
     };
 
-    setPosts([...posts, newPost]);
+    setPosts([newPost, ...posts]);
     setInputValue("");
+    listRef.current?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
-  // Update - User 이름 수정
-  const handleEdit = (id: number, newName: string) => {
+  const onEditClick = (id: number, newName: string) => {
     if (newName.trim() === "") return;
 
     setPosts(
@@ -109,50 +109,52 @@ const App = () => {
     );
   };
 
-  // Delete - User 삭제
-  const handleDelete = (id: number) => {
+  const onDeleteClick = (id: number) => {
     setPosts(posts.filter((post) => post.id !== id));
   };
 
   return (
-    <main>
-      <img src={logo} alt="logo" className="logo" />
-      <h1>Users List</h1>
-
-      {/* Create */}
-      <div className="user-input">
+    <>
+      <div className="post-input">
         <input
           type="text"
           value={inputValue}
           onChange={({ target }) => setInputValue(target.value)}
-          onKeyDown={({ key }) => key === "Enter" && handleAdd()}
+          onKeyDown={({ key }) => key === "Enter" && onAddClick()}
           placeholder="사용자 이름을 입력하세요..."
-          className="user-input-field"
+          className="post-input-field"
         />
-        <button onClick={handleAdd} className="user-add-btn">
+        <button onClick={onAddClick} className="post-add-btn">
           추가
         </button>
       </div>
-
-      {/* Read */}
-      <ul className="user-list">
-        {posts.length === 0 ? (
-          <li className="user-empty">사용자가 없습니다.</li>
-        ) : (
-          posts.map((post) => (
-            <UserItem
-              key={post.id}
-              post={post}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))
-        )}
+      <ul className="post-list" ref={listRef}>
+        {posts.map((post) => (
+          <UserItem
+            key={post.id}
+            post={post}
+            onEdit={onEditClick}
+            onDelete={onDeleteClick}
+          />
+        ))}
       </ul>
-
       {posts.length > 0 && (
-        <div className="user-stats">전체: {posts.length}개</div>
+        <div className="post-stats">전체: {posts.length}개</div>
       )}
+    </>
+  );
+};
+
+const App = () => {
+  return (
+    <main>
+      <header className="header">
+        <img src={logo} alt="logo" className="logo" />
+        <h1>POSTS</h1>
+      </header>
+      <Suspense fallback={<div className="loading">LOADING...</div>}>
+        <UserList />
+      </Suspense>
     </main>
   );
 };
