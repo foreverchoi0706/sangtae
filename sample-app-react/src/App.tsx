@@ -51,7 +51,6 @@ const UserItem: FC<{
         <>
           <span
             className="post-name"
-            onDoubleClick={() => setIsEditing(true)}
             onClick={() => setGender(gender === "M" ? "F" : "M")}
           >
             {gender}:{post.title}

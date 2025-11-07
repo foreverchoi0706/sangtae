@@ -48,11 +48,12 @@ export const createDerivedAtom = <T>(
   atoms.forEach((atom) => {
     subscribe(atom, () => {
       const newValue = callback(get);
-      if (Object.is(derivedAtom[VALUE], newValue)) return;
-      derivedAtom[VALUE] = newValue;
+      if (!Object.is(derivedAtom[VALUE], newValue)) {
+        derivedAtom[VALUE] = newValue;
 
-      // 구독자들에게 알림
-      derivedAtom[LISTENERS]?.forEach((listener) => listener(newValue));
+        // 구독자들에게 알림
+        derivedAtom[LISTENERS]?.forEach((listener) => listener(newValue));
+      }
     });
   });
   return derivedAtom;
@@ -152,7 +153,7 @@ export const get = <T>(atom: Atom<T>): T => atom[VALUE];
  * @param {T} newValue 새로운 값
  */
 export const set = <T>(atom: Atom<T>, newValue: T) => {
-  if (Object.is(atom[VALUE], newValue)) {
+  if (!Object.is(atom[VALUE], newValue)) {
     // 값이 변경되었다면 값을 업데이트하고 구독자에게 알림
     (atom as InternalAtom<T>)[VALUE] = newValue;
 

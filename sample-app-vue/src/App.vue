@@ -1,76 +1,97 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useAtom } from "./hooks/useAtom";
-import { $users, type User } from "./stores/users";
-import UserItem from "./components/UserItem.vue";
+import { $posts, type Post } from "./stores/posts";
+import PostItem from "./components/PostItem.vue";
+import logo from "./assets/vue.svg";
 
-const [users, setUsers] = useAtom<User[]>($users);
-const inputValue = ref("");
+const isLoading = ref(true);
+const [posts, setPosts] = useAtom($posts);
+const inputValue = ref<Post["title"]>("");
+const listRef = ref<HTMLUListElement | null>(null);
 
-// Create - User 추가
-const handleAdd = () => {
-  if (inputValue.value.trim() === "") return;
+// posts가 업데이트되면 로딩 완료
+watch(
+  () => posts.value,
+  (newValue) => {
+    if (newValue !== undefined && Array.isArray(newValue)) {
+      isLoading.value = false;
+    }
+  },
+  { immediate: true }
+);
 
-  const newUser: User = {
+const onAddClick = () => {
+  if (inputValue.value.trim() === "" || !posts.value) return;
+
+  const newPost: Post = {
     id:
-      users.value.length > 0
-        ? Math.max(...users.value.map((u) => u.id)) + 1
+      posts.value.length > 0
+        ? Math.max(...posts.value.map((p) => p.id)) + 1
         : 1,
-    name: inputValue.value.trim(),
+    title: inputValue.value.trim(),
+    body: "body",
+    userId: 1,
   };
 
-  setUsers([...users.value, newUser]);
+  setPosts([newPost, ...posts.value]);
   inputValue.value = "";
+
+  if (listRef.value) {
+    listRef.value.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
 };
 
-// Update - User 이름 수정
-const handleEdit = (id: number, newName: string) => {
-  if (newName.trim() === "") return;
+const onEditClick = (id: number, newTitle: string) => {
+  if (newTitle.trim() === "" || !posts.value) return;
 
-  setUsers(
-    users.value.map((user) =>
-      user.id === id ? { ...user, name: newName.trim() } : user
+  setPosts(
+    posts.value.map((post) =>
+      post.id === id ? { ...post, title: newTitle.trim() } : post
     )
   );
 };
 
-// Delete - User 삭제
-const handleDelete = (id: number) => {
-  setUsers(users.value.filter((user) => user.id !== id));
+const onDeleteClick = (id: number) => {
+  if (!posts.value) return;
+  setPosts(posts.value.filter((post) => post.id !== id));
 };
 </script>
 
 <template>
   <main>
-    <h1>Users List</h1>
-
-    <!-- Create -->
-    <div class="user-input">
-      <input
-        type="text"
-        v-model="inputValue"
-        @keypress.enter="handleAdd"
-        placeholder="사용자 이름을 입력하세요..."
-        class="user-input-field"
-      />
-      <button @click="handleAdd" class="user-add-btn">추가</button>
-    </div>
-
-    <!-- Read -->
-    <ul class="user-list">
-      <li v-if="users.length === 0" class="user-empty">사용자가 없습니다.</li>
-      <UserItem
-        v-for="user in users"
-        :key="user.id"
-        :user="user"
-        @edit="handleEdit"
-        @delete="handleDelete"
-      />
-    </ul>
-
-    <div v-if="users.length > 0" class="user-stats">
-      전체: {{ users.length }}명
-    </div>
+    <header class="header">
+      <img :src="logo" alt="logo" class="logo" />
+      <h1>POSTS</h1>
+    </header>
+    <div v-if="isLoading" class="loading">LOADING...</div>
+    <template v-else>
+      <div class="post-input">
+        <input
+          type="text"
+          v-model="inputValue"
+          @keydown.enter="onAddClick"
+          placeholder="사용자 이름을 입력하세요..."
+          class="post-input-field"
+        />
+        <button @click="onAddClick" class="post-add-btn">추가</button>
+      </div>
+      <ul class="post-list" ref="listRef">
+        <PostItem
+          v-for="post in posts"
+          :key="post.id"
+          :post="post"
+          @edit="onEditClick"
+          @delete="onDeleteClick"
+        />
+      </ul>
+      <div v-if="posts && posts.length > 0" class="post-stats">
+        전체: {{ posts.length }}개
+      </div>
+    </template>
   </main>
 </template>
 
@@ -78,188 +99,109 @@ const handleDelete = (id: number) => {
 main {
   max-width: 600px;
   width: 100%;
-  padding: 2rem;
-  background: #f5f5f5;
-  border-radius: 12px;
+  padding: 1rem;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 1rem);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
 }
 
 h1 {
   text-align: center;
   color: #333;
-  margin-bottom: 2rem;
 }
 
-/* Create - Input */
-.user-input {
+.loading {
+  text-align: center;
+  color: #333;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.post-input {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
-.user-input-field {
-  flex: 1;
-  max-width: 400px;
-  padding: 0.75rem;
+.post-input-field {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.6rem;
   border: 2px solid #ddd;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   outline: none;
   transition: border-color 0.2s;
 }
 
-.user-input-field:focus {
+.post-input-field:focus {
   border-color: #646cff;
 }
 
-.user-add-btn {
-  padding: 0.75rem 1.5rem;
+.post-add-btn {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.6rem 1rem;
   background: #646cff;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.user-add-btn:hover {
+.post-add-btn:hover {
   background: #535bf2;
 }
 
-/* Read - List */
-.user-list {
+.post-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
 }
 
-.user-empty {
+.post-empty {
   text-align: center;
   padding: 2rem;
   color: #888;
   font-style: italic;
 }
 
-.user-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-  width: 100%;
-  max-width: 500px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  transition: all 0.2s;
-}
-
-.user-item:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.user-name {
-  flex: 1;
-  text-align: center;
-  font-size: 1rem;
-  color: #333;
-  cursor: pointer;
-  user-select: none;
-}
-
-.user-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.user-edit-btn,
-.user-delete-btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.user-edit-btn {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.user-edit-btn:hover {
-  background: #e0e0e0;
-}
-
-.user-delete-btn {
-  background: #ff4444;
-  color: white;
-}
-
-.user-delete-btn:hover {
-  background: #cc0000;
-}
-
-/* Update - Edit */
-.user-edit {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.user-edit-input {
-  flex: 1;
-  max-width: 300px;
-  padding: 0.5rem;
-  border: 2px solid #646cff;
-  border-radius: 4px;
-  font-size: 1rem;
-  outline: none;
-  text-align: center;
-}
-
-.user-save-btn,
-.user-cancel-btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.user-save-btn {
-  background: #646cff;
-  color: white;
-}
-
-.user-save-btn:hover {
-  background: #535bf2;
-}
-
-.user-cancel-btn {
-  background: #e0e0e0;
-  color: #333;
-}
-
-.user-cancel-btn:hover {
-  background: #d0d0d0;
-}
-
-/* Stats */
-.user-stats {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+.post-stats {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
   border-top: 1px solid #e0e0e0;
   text-align: center;
   color: #666;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  flex-shrink: 0;
 }
 </style>
