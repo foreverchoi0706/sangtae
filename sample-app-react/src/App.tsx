@@ -1,17 +1,16 @@
-import { Suspense, useEffect, useRef, useState, type FC } from "react";
+import { Suspense, useRef, useState, useMemo, type FC } from "react";
+import { Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
 import "@/App.css";
-import { $a, $b, $c, $gender, $posts, type Post } from "@/stores/posts";
 import useAtom from "@/hooks/useAtom";
 import logo from "@/assets/react.svg";
-import { flushSync } from "react-dom";
-import { createAtom, get, set, subscribe } from "sangtae-js";
+import { createAsyncAtom } from "sangtae-js";
+import { type Post, getPost, getPosts } from "./apis";
 
 const UserItem: FC<{
   post: Post;
   onEdit: (id: number, postTitle: Post["title"]) => void;
   onDelete: (id: number) => void;
 }> = ({ post, onEdit, onDelete }) => {
-  const [gender, setGender] = useAtom($gender);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editValue, setEditValue] = useState<Post["title"]>(post.title);
 
@@ -34,10 +33,10 @@ const UserItem: FC<{
           <input
             type="text"
             value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === "Enter") onSaveClick();
-              if (e.key === "Escape") onCancelClick();
+            onChange={({ target }) => setEditValue(target.value)}
+            onKeyDown={({ key }) => {
+              if (key === "Enter") onSaveClick();
+              if (key === "Escape") onCancelClick();
             }}
             className="post-edit-input"
             autoFocus
@@ -51,12 +50,9 @@ const UserItem: FC<{
         </div>
       ) : (
         <>
-          <span
-            className="post-name"
-            onClick={() => setGender(gender === "M" ? "F" : "M")}
-          >
-            {gender}:{post.title}
-          </span>
+          <Link to={`/post/${post.id}`} className="post-name">
+            {post.title}
+          </Link>
           <div className="post-actions">
             <button
               onClick={() => setIsEditing(true)}
@@ -77,8 +73,9 @@ const UserItem: FC<{
   );
 };
 
-const UserList = () => {
-  const [posts, setPosts] = useAtom($posts);
+const HomePage = () => {
+  console.log("USER LIST RENDER");
+  const [posts, setPosts] = useAtom(createAsyncAtom<Post[]>(getPosts()));
   const [inputValue, setInputValue] = useState<Post["title"]>("");
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -114,17 +111,6 @@ const UserList = () => {
     setPosts(posts.filter((post) => post.id !== id));
   };
 
-  useEffect(() => {
-    const a = { id: 1 };
-    const atom = createAtom(a);
-
-    a.id = 2;
-    subscribe(atom, () => {
-      console.log(get(atom));
-    });
-    set(atom, a);
-  }, []);
-
   return (
     <>
       <div className="post-input">
@@ -157,37 +143,76 @@ const UserList = () => {
   );
 };
 
-const App = () => {
-  const [a, setA] = useAtom($a);
-  const [b, setB] = useAtom($b);
-  const [c, setC] = useAtom($c);
+const PostPage = () => {
+  console.log("POST PAGE RENDER");
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const postAtom = useMemo(
+    () => createAsyncAtom<Post>(getPost(Number(id!))),
+    [id]
+  );
+  const [post] = useAtom(postAtom);
 
+  console.log(post);
+
+  if (!post) {
+    return (
+      <div className="post-detail">
+        <h2>포스트를 찾을 수 없습니다</h2>
+        <button onClick={() => navigate("/")} className="post-back-btn">
+          목록으로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="post-detail">
+      <button onClick={() => navigate("/")} className="post-back-btn">
+        ← 목록으로 돌아가기
+      </button>
+      <div className="post-detail-content">
+        <h2>{post.title}</h2>
+        <div className="post-detail-meta">
+          <span>게시글 ID: {post.id}</span>
+          <span>사용자 ID: {post.userId}</span>
+        </div>
+        <div className="post-detail-body">
+          <h3>내용</h3>
+          <p>{post.body}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const App = () => {
   return (
     <main>
       <header className="header">
-        <img src={logo} alt="logo" className="logo" />
-        <h1>SAMPLE APP REACT</h1>
+        <Link to="/" className="header-link">
+          <img src={logo} alt="logo" className="logo" />
+          <h1>SAMPLE APP REACT</h1>
+        </Link>
       </header>
-      <div>{a}</div>
-      <div>{b}</div>
-      <div>{c}</div>
-      <button onClick={() => setA(a + "AAAA")}>setA</button>
-      <button onClick={() => setB(b + "BBBB")}>setB</button>
-      <button onClick={() => setC(c + "CCCC")}>setC</button>
-      <button
-        onClick={() => {
-          flushSync(() => {
-            setA("AAAA");
-            setB("BBBB");
-          });
-          setC("CCCC");
-        }}
-      >
-        SET ALL
-      </button>
-      <Suspense fallback={<div className="loading">LOADING...</div>}>
-        <UserList />
-      </Suspense>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Suspense fallback={<div className="loading">LOADING...</div>}>
+              <HomePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/post/:id"
+          element={
+            <Suspense fallback={<div className="loading">LOADING...</div>}>
+              <PostPage />
+            </Suspense>
+          }
+        />
+      </Routes>
     </main>
   );
 };

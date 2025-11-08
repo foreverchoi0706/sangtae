@@ -176,7 +176,7 @@ export const subscribe = <T>(atom: Atom<T>, callback: Listener<T>) => {
   }
 
   listeners.add(callback);
-  // callback(atom[VALUE]);
+  callback(atom[VALUE]);
 
   return () => {
     // atom에서 현재 listeners를 가져와서 실제 상태 확인
