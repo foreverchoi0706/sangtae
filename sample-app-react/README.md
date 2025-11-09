@@ -1,73 +1,38 @@
-# React + TypeScript + Vite
+# Minimal Global State Sample App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+이 프로젝트는 `sangtae-js` Minimal Global State 라이브러리의 필수 기능을 한눈에 시연할 수 있도록 구성된 React + Vite 예제 앱이다. 단일 데모 페이지에서 `createAtom`, `createDerivedAtom`, `createAsyncAtom`, `set`, `get`, `subscribe`, `useAtom` 등의 핵심 API를 인터랙티브하게 체험할 수 있다.
 
-Currently, two official plugins are available:
+## 실행 방법
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+이후 브라우저에서 `http://localhost:5173`에 접속하면 된다.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 화면 구성
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### 데모 (`/`)
+
+- **Atom 값/업데이트 카드**  
+  `createAtom`으로 만든 카운터 상태를 여러 컴포넌트에서 `useAtom`으로 구독한다.  
+  `같은 값으로 set` 버튼을 눌러도 렌더 배지가 증가하지 않는 것을 통해, 값이 변하지 않으면 구독자가 알림을 받지 않는다는 사실을 확인할 수 있다.
+
+- **스텝 Atom & 파생 Atom**  
+  별도의 `step` Atom과 `createDerivedAtom`으로 만든 두 배 카운터 값을 별도 카드로 분리했다. 특정 Atom을 구독하는 컴포넌트만 다시 렌더링되는 모습을 렌더 배지에서 확인할 수 있다.
+
+- **createAsyncAtom 카드**  
+  `createAsyncAtom`에 Promise를 전달해 가짜 원격 데이터를 가져오고 `Suspense`로 로딩 상태를 노출한다. 새로고침 버튼으로 Promise를 다시 생성하여 로딩→완료 흐름을 반복 확인할 수 있고, 가져온 데이터는 `set`으로 즉시 수정 가능하다.
+
+- **요약 카드**  
+  `get`을 통해 React 컴포넌트 밖에서도 스냅샷을 읽어올 수 있음을 보여주기 위해 "현재 상태 콘솔로 확인" 버튼을 제공한다. 콘솔에서 `createDerivedAtom`이 결괏값을 어떻게 묶어주는지 확인하면 된다.
+
+- **수동 구독 카드**  
+  `subscribe`를 사용해 카운터 변경 이력을 쌓는다. "구독 해제" 버튼을 누르면 내부 listener Set이 정리되고, 다시 구독을 시작하면 최초 값부터 다시 누적되는 모습을 볼 수 있다.
+
+## 확인 팁
+
+- 데모 페이지에서는 React DevTools의 "Highlight updates" 옵션을 켜면 구독 중인 컴포넌트만 다시 렌더링되는 모습을 더 직관적으로 볼 수 있다.
+- 수동 구독 카드에서 구독을 해제하면 리스트가 초기화되며, 다시 구독을 누르면 `subscribe` 등록 시 바로 현재 값이 한 번 실행된다는 것을 확인할 수 있다.
+- README와 함께 `Design.md`(별도 문서)를 참고하면 라이브러리 설계 의도와 API 사용 패턴을 더 쉽게 설명할 수 있다.
