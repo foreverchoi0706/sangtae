@@ -11,73 +11,77 @@
 
 - 과제 코드: JF002
 - 과제 수령일: 2025.11.05
-- 소요 시간: (총 작업 시간을 입력해 주시면 감사하겠습니다.)
+- 과제 제출일: 2025.11.11
+- 소요 시간: 18~20시간
 
 ### 2.2 수행 환경
 
 - 운영 체제: macOS (Darwin 25.0.0) 기준으로 검증되었습니다.
-- Node.js: LTS 버전(v20 계열)을 권장드리며 동일 환경에서 테스트했습니다.
+- Node.js: LTS 버전(v24 계열)을 권장드리며 동일 환경에서 테스트했습니다.
 - 패키지 매니저: npm 10.9.3
 - 주요 개발 도구: Cursor IDE, GPT-5 Codex Agent
 - 참고 문서: React 공식 문서, Vue 공식 문서, MDN JavaScript 문서, Vite 및 Vitest 공식 문서
 
 ### 2.3 결과 요약
 
-| 분류              | 항목                                    | 상태   | 비고                                                                                                        |
-| ----------------- | --------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
-| 핵심 API          | `createAtom`, `get`, `set`, `subscribe` | 완료   | 값 비교는 `Object.is`로 처리하여 NaN, ±0도 안전하게 비교합니다.                                             |
-| 선택 기능         | `createDerivedAtom`                     | 완료   | 의존 atom을 자동 추적하고, 값 변경 시 파생 atom을 다시 계산합니다.                                          |
-| 선택 기능         | `createAsyncAtom`                       | 완료   | `Promise` 완료 전에는 Suspense 친화적으로 `Promise`를 throw하며, WeakMap 캐싱을 적용했습니다.               |
-| 리소스 관리       | Listener GC 처리                        | 완료   | 마지막 구독자가 해지되면 내부 `Set`을 `null`로 되돌려 GC가 가능합니다.                                      |
-| 프레임워크 연동   | `sangtae-react` `useAtom` 훅            | 완료   | `useSyncExternalStore`를 활용해 안정적인 스냅샷을 제공합니다.                                               |
-| 프레임워크 연동   | `sangtae-vue` `useAtom` 훅              | 완료   | Vue `ref`와 `onUnmounted`를 사용해 구독 수명 주기를 관리합니다.                                             |
-| 샘플 애플리케이션 | React (Vite) 데모                       | 완료   | 모든 핵심/선택 기능을 UI로 검증할 수 있습니다.                                                              |
-| 샘플 애플리케이션 | Vue (Vite) 데모                         | 완료   | React 버전과 동일한 시나리오를 Vue 3 컴포넌트로 제공합니다.                                                 |
-| 테스트            | `@sangtae-js` 단위 테스트               | 완료   | Vitest로 필수/선택 기능을 모두 검증합니다.                                                                  |
-| 배치 업데이트     | 별도 배치 API                           | 미구현 | react,vue 에서 제공되는 API와 useAtom을 연동하고 별도의 배치 API 구현 없이 해당 기능 구현을 만족하였습니다. |
+| 분류              | 항목                                    | 상태 | 비고                                                                                                   |
+| ----------------- | --------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------ |
+| 핵심 API          | `createAtom`, `get`, `set`, `subscribe` | 완료 | 값 비교는 `Object.is`로 처리하여 NaN, ±0도 안전하게 비교합니다.                                        |
+| 선택 기능         | `createDerivedAtom`                     | 완료 | 의존 atom을 자동 추적하고, 값 변경 시 파생 atom을 다시 계산합니다.                                     |
+| 선택 기능         | `createAsyncAtom`                       | 완료 | `Promise` 완료 전에는 Suspense 친화적으로 `Promise`를 throw하며, WeakMap 캐싱을 적용했습니다.          |
+| 리소스 관리       | Listener GC 처리                        | 완료 | 마지막 구독자가 해지되면 내부 `Set`을 `null`로 되돌려 GC가 가능합니다.                                 |
+| 프레임워크 연동   | `sangtae-react` `useAtom` 훅            | 완료 | `useSyncExternalStore`를 활용해 안정적인 스냅샷을 제공합니다.                                          |
+| 프레임워크 연동   | `sangtae-vue` `useAtom` 훅              | 완료 | Vue `ref`와 `onUnmounted`를 사용해 구독 수명 주기를 관리합니다.                                        |
+| 샘플 애플리케이션 | React (Vite) 데모                       | 완료 | 모든 핵심/선택 기능을 UI로 검증할 수 있습니다.                                                         |
+| 샘플 애플리케이션 | Vue (Vite) 데모                         | 완료 | React 버전과 동일한 시나리오를 Vue 3 컴포넌트로 제공합니다.                                            |
+| 테스트            | `@sangtae-js` 단위 테스트               | 완료 | Vitest로 필수/선택 기능을 모두 검증합니다.                                                             |
+| 배치 업데이트     | 별도 배치 API                           | 완료 | react에서 제공되는 API와 useAtom을 연동하여 별도의 배치 API 구현 없이 해당 기능 구현을 만족하였습니다. |
 
 ### 2.4 수행 중 가정
 
 - Node.js LTS 환경이 사전에 설치되어 있다고 가정했습니다.
 - 요구사항 중 **값이 이전과 달라졌을 경우에만** 의 기준은 참조가 다르면 값이 다르다고 가정하였습니다.
 - 불변성 유지를 유도하도록 설계 및 유도하였습니다.
-- React 18버전 이상의 환경에서 동작되는 것으로 가정하였습니다.
+- React 관련 요구사항은 React 18버전 이상의 환경에서 동작되는 것으로 가정하였습니다.
 
 ## 3. 과제 산출물 정보
 
 ### 3.1 디렉터리/파일 구조
 
-```
+<pre>
 .
 ├── @sangtae-js        # 코어 상태 관리 라이브러리
 │   ├── src
-│   └── dist
-│   └── README.md
+│   ├── dist
+│   ├── <a href="./@sangtae-js/README.md">README.md</a>
+│   └── ...
 ├── @sangtae-react     # React 전용 훅 라이브러리
 │   ├── src
-│   └── dist
-│   └── README.md
+│   ├── dist
+│   ├── <a href="./@sangtae-react/README.md">README.md</a>
+│   └── ...
 ├── @sangtae-vue       # Vue 3 전용 훅 라이브러리
 │   ├── src
-│   └── dist
-│   └── README.md
+│   ├── dist
+│   ├── <a href="./@sangtae-vue/README.md">README.md</a>
+│   └── ...
 ├── sample-app-react   # React + Vite 데모 앱
 ├── sample-app-vue     # Vue 3 + Vite 데모 앱
-├── package.json        # 루트 워크스페이스 설정
-├── package-lock.json   # 의존성 잠금 파일
-└── README.md
-└── DESIGN.md
-```
+├── <a href="./package.json">package.json</a>        # 루트 워크스페이스 설정
+├── <a href="./package-lock.json">package-lock.json</a>   # 의존성 잠금 파일
+├── <a href="./README.md">README.md</a>
+└── <a href="./DESIGN.md">DESIGN.md</a>
+</pre>
 
 ### 3.2 설치 및 실행 방법
 
-1. **워크스페이스 의존성 설치**
+1. **프로젝트 워크스페이스 의존성 설치**
    ```bash
    npm run install:all
    ```
-2. **코어 및 어댑터 빌드**
+2. **sangtae-js, sangtae-react, sangtae-vue 빌드**
    ```bash
-   npmr run build:all
+   npm run build:all
    ```
 3. **단위 테스트 실행 (`@sangtae-js`)**
    ```bash
@@ -99,7 +103,7 @@
 
 - `tsup`: ESM/CJS 번들 생성을 위해 사용했습니다.
 - `vitest`: `@sangtae-js` 패키지의 단위 테스트 러너로 사용했습니다.
-- `vite`, `@vitejs/plugin-react-swc`, `@vitejs/plugin-vue`: 샘플 앱 개발 서버 및 번들링을 담당합니다.
+- `vite`, `@vitejs/plugin-react-swc`, `@vitejs/plugin-vue`: 데모 앱 개발 서버 및 번들링을 담당합니다.
 - `vue-tsc`: Vue 프로젝트의 타입 검사를 위해 사용했습니다.
 - `eslint` (React 앱): 개발 중 정적 분석을 수행할 수 있도록 설정했습니다.
 
@@ -132,7 +136,6 @@
 
 - `@sangtae-js/src/index.test.ts`에서 필수 및 선택 기능을 모두 검증했습니다.
 - 비동기 atom 시나리오는 `Promise` 해결/거부, 캐싱, 수동 `set`까지 포함합니다.
-- 필요 시 `npx vitest --coverage --workspace=@sangtae-js` 명령으로 커버리지 리포트를 확인해 주십시오.
 
 ## 6. 과제 피드백
 

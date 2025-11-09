@@ -4,21 +4,20 @@ Minimal Global State Management Library
 
 ## 소개
 
-`sangtae-js`는 심플한 API로 전역 상태를 선언하고 관리할 수 있는 초경량 상태 관리 라이브러리입니다. 불필요한 러닝 커브 없이 `atom` 개념만으로 동기/비동기 상태와 파생 상태를 모두 다룰 수 있도록 설계했습니다.
+`sangtae-js`는 심플한 API로 전역 상태를 선언하고 관리할 수 있는 초경량 상태 관리 라이브러리입니다. `atom` 개념만으로 동기/비동기 상태와 파생 상태를 모두 다룰 수 있도록 설계했습니다.
 
 ## 주요 특징
 
 - **TypeScript 우선**: 제네릭 기반 API로 컴파일 타임 타입을 보장합니다.
 - **파생 상태 지원**: 여러 atom을 조합해 memoized 파생 값을 만들 수 있습니다.
 - **비동기 친화적**: `Promise`를 기반으로 Suspense 패턴과 자연스럽게 연동됩니다.
-- **구독 기반 업데이트**: 필요한 곳에서만 `subscribe`하여 최소한의 리렌더로 최신 상태를 유지합니다.
+- **구독 기반 업데이트**: 필요한 곳에서만 `subscribe`하여 최신 상태를 유지합니다.
+- **불변성**: 불변 기반으로 값의 예측 가능성, 안정성을 장점으로 가집니다.
 
 ## 설치
 
 ```bash
 npm install sangtae-js
-# 또는
-yarn add sangtae-js
 ```
 
 ## 빠른 시작
@@ -58,22 +57,18 @@ console.log(get(totalPriceAtom)); // 30000 (자동으로 갱신됩니다.)
 
 `createDerivedAtom`은 내부적으로 참조한 atom들을 자동으로 추적하고, 값이 달라질 때마다 파생 atom을 다시 계산합니다.
 
-## 비동기 atom과 Suspense
+## 비동기 atom
 
 ```ts
 import { createAsyncAtom, get } from "sangtae-js";
 
-const userAtom = createAsyncAtom(fetch("/api/me").then((res) => res.json()));
+const asyncAtom = createAsyncAtom(Promise.resolve(1));
 
 try {
-  const user = get(userAtom);
-  console.log(user.name);
+  const value = get(asyncAtom);
+  console.log(value);
 } catch (value) {
-  if (value instanceof Promise) {
-    console.log("로딩 중...");
-  } else {
-    console.error("에러 발생", value);
-  }
+  value.then(console.log).catch(console.error);
 }
 ```
 
