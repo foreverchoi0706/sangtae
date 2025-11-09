@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { createAsyncAtom } from "sangtae-js";
 import { useAtom } from "sangtae-vue";
 import RenderBadge from "@/components/RenderBadge.vue";
@@ -74,6 +74,16 @@ const completedCount = computed(() => {
 
 const totalCount = computed(() => (Array.isArray(todos.value) ? todos.value.length : 0));
 
+const renderTrigger = ref(0);
+
+watch(
+  () => [isLoading.value, todos.value],
+  () => {
+    renderTrigger.value += 1;
+  },
+  { immediate: true, deep: true }
+);
+
 const onToggleComplete = (id: number) => {
   if (!Array.isArray(todos.value)) return;
   setTodos(
@@ -96,7 +106,7 @@ const onCompleteAll = () => {
   >
     <header class="atom-card__header">
       <h3>createAsyncAtom 데모</h3>
-      <RenderBadge />
+      <RenderBadge :trigger="renderTrigger" />
     </header>
     <p class="atom-card__hint">
       Promise를 받아 최초 구독 시 로딩 상태를 노출합니다. 이후에는 `set`을 통해

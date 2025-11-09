@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUpdated, ref } from "vue";
+import { onMounted, onUpdated, ref, watch } from "vue";
+
+const props = defineProps<{
+  trigger?: number;
+}>();
 
 const badgeRef = ref<HTMLSpanElement | null>(null);
 let renderCount = 0;
@@ -12,7 +16,19 @@ const updateBadge = () => {
 };
 
 onMounted(updateBadge);
-onUpdated(updateBadge);
+
+if (props.trigger === undefined) {
+  onUpdated(updateBadge);
+} else {
+  watch(
+    () => props.trigger,
+    (_, oldVal) => {
+      if (oldVal !== undefined) {
+        updateBadge();
+      }
+    }
+  );
+}
 </script>
 
 <template>

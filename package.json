@@ -14,9 +14,9 @@
   },
   "scripts": {
     "install:all": "npm install",
-    "build:sangtae-js": "npm run build --workspace=@sangtae-js",
-    "build:sangtae-react": "npm run build --workspace=@sangtae-react",
-    "build:sangtae-vue": "npm run build --workspace=@sangtae-vue",
+    "build:all": "npm run build --workspace=@sangtae-js && npm run build --workspace=@sangtae-react && npm run build --workspace=@sangtae-vue",
+    "dev:sample-app-react": "npm run dev --workspace=sample-app-react",
+    "dev:sample-app-vue": "npm run dev --workspace=sample-app-vue",
     "preview:sample-app-react": "npm run build --workspace=sample-app-react && npm run preview --workspace=sample-app-react",
     "preview:sample-app-vue": "npm run build --workspace=sample-app-vue && npm run preview --workspace=sample-app-vue"
   },
