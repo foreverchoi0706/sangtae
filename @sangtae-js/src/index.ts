@@ -8,6 +8,9 @@ type InternalAtom<T> = {
   [LISTENERS]: Set<Listener<T>> | null;
 };
 
+// async atom의 현재 상태·대기중인 Promise·에러 정보를 모아둔 객체
+type Status = "success" | "pending" | "error";
+
 /** 구독 리스너*/
 export type Listener<T> = (value: T) => void;
 
@@ -34,119 +37,122 @@ export const createAtom = <T>(initialValue: T): Atom<T> => {
 export const createDerivedAtom = <T>(
   callback: (get: <U>(atom: Atom<U>) => U) => T
 ): Atom<T> => {
+  const state: {
+    status: Status;
+    suspense: Promise<unknown> | null;
+    error: unknown;
+  } = {
+    status: "pending",
+    suspense: null,
+    error: undefined,
+  };
+
+  // 직전 평가에서 읽힌 atom 집합을 추적해서 구독을 자동으로 관리
+  let atoms = new Set<Atom<unknown>>();
+  const subscriptions = new Map<Atom<unknown>, () => void>();
+
+  // 상태만 바꾸는 대신 관련 필드를 한 번에 초기화하는 유틸
+  const setStatus = (status: Status) => {
+    state.status = status;
+    if (status !== "error") state.error = undefined;
+    if (status !== "pending") state.suspense = null;
+  };
+
+  // 새로 읽힌 atom들과 비교해 끊어진 구독은 정리하고 새 의존성은 구독
+  const applySubscriptions = (nextTrackedAtoms: Set<Atom<unknown>>) => {
+    atoms.forEach((atom) => {
+      if (!nextTrackedAtoms.has(atom)) {
+        subscriptions.get(atom)?.();
+        subscriptions.delete(atom);
+      }
+    });
+
+    nextTrackedAtoms.forEach((atom) => {
+      if (!subscriptions.has(atom)) {
+        const unsubscribe = subscribe(atom, () => evaluate(true));
+        subscriptions.set(atom, unsubscribe);
+      }
+    });
+
+    atoms = nextTrackedAtoms;
+  };
+
   const derivedAtom: InternalAtom<T> = {
     [VALUE]: undefined as any,
     [LISTENERS]: null,
   };
 
-  let status: "success" | "pending" | "error" = "pending";
-  let suspense: Promise<unknown> | null = null;
-  let error: unknown;
-
-  let trackedAtoms = new Set<Atom<unknown>>();
-  const subscriptions = new Map<Atom<unknown>, () => void>();
-
-  const evaluate = (options?: { suppressErrors?: boolean }) => {
+  // 파생 atom 재평가 로직: 의존성 추적 → 값 계산 → 상태 업데이트
+  const evaluate = (suppressErrors = false) => {
     const nextTrackedAtoms = new Set<Atom<unknown>>();
 
-    const getWithTracking = <U>(atom: Atom<U>): U => {
+    const trackedGet = <U>(atom: Atom<U>): U => {
       nextTrackedAtoms.add(atom as Atom<unknown>);
       return get(atom);
     };
 
-    const syncTrackedAtoms = () => {
-      trackedAtoms.forEach((atom) => {
-        if (!nextTrackedAtoms.has(atom)) {
-          const unsubscribe = subscriptions.get(atom);
-          if (unsubscribe) {
-            unsubscribe();
-            subscriptions.delete(atom);
-          }
-        }
-      });
-
-      nextTrackedAtoms.forEach((atom) => {
-        if (!subscriptions.has(atom)) {
-          const unsubscribe = subscribe(atom, () => {
-            evaluate({ suppressErrors: true });
-          });
-          subscriptions.set(atom, unsubscribe);
-        }
-      });
-
-      trackedAtoms = nextTrackedAtoms;
-    };
-
     try {
-      const newValue = callback(getWithTracking);
-
-      status = "success";
-      suspense = null;
-      error = undefined;
-
-      syncTrackedAtoms();
+      const newValue = callback(trackedGet);
+      setStatus("success");
+      applySubscriptions(nextTrackedAtoms);
 
       if (!Object.is(derivedAtom[VALUE], newValue)) {
         derivedAtom[VALUE] = newValue;
         derivedAtom[LISTENERS]?.forEach((listener) => listener(newValue));
       }
     } catch (thrown) {
-      syncTrackedAtoms();
+      applySubscriptions(nextTrackedAtoms);
 
       if (thrown instanceof Promise) {
-        status = "pending";
-        error = undefined;
-        suspense = thrown;
-
+        // callback이 Promise를 던졌을 때 Suspense 플로우를 유지하도록 처리
+        state.status = "pending";
+        state.error = undefined;
+        state.suspense = thrown;
         thrown
           .then(() => {
-            if (suspense === thrown) {
-              evaluate({ suppressErrors: true });
+            if (state.suspense === thrown) {
+              evaluate(true);
             }
           })
           .catch((err) => {
-            if (suspense === thrown) {
-              status = "error";
-              error = err;
+            if (state.suspense === thrown) {
+              state.status = "error";
+              state.error = err;
             }
           });
-
         return;
       }
 
-      status = "error";
-      error = thrown;
-      suspense = null;
+      setStatus("error");
+      state.error = thrown;
 
-      if (!options?.suppressErrors) {
-        throw thrown;
-      }
+      if (!suppressErrors) throw thrown;
     }
   };
 
   evaluate();
 
   const proxyAtom = new Proxy(derivedAtom, {
+    // 값 읽을 때 상태에 따라 Suspense 또는 에러를 그대로 전달
     get(target, property) {
       if (property === VALUE) {
-        if (status === "pending" && suspense) {
-          throw suspense;
+        if (state.status === "pending" && state.suspense) {
+          throw state.suspense;
         }
-        if (status === "error") {
-          throw error;
+        if (state.status === "error") {
+          throw state.error;
         }
       }
       return Reflect.get(target, property);
     },
+    // 값 설정 시 중복 갱신을 막고 상태를 성공으로 초기화
     set(target, property, value) {
       if (property === VALUE) {
         if (Object.is(target[VALUE], value)) {
           return true;
         }
         target[VALUE] = value as T;
-        status = "success";
-        suspense = null;
-        error = undefined;
+        setStatus("success");
         return true;
       }
 
@@ -173,9 +179,15 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
   }
 
   // 초기 상태: Promise가 아직 완료되지 않음
-  let status: "pending" | "success" | "error" = "pending";
-  let data: T | undefined;
-  let error: any;
+  const state: {
+    status: Status;
+    data: T | undefined;
+    error: unknown;
+  } = {
+    status: "pending",
+    data: undefined,
+    error: undefined,
+  };
 
   // atom 생성 (초기값은 undefined이지만, get 호출 시 Promise throw)
   const atom: InternalAtom<T> = {
@@ -186,16 +198,16 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
   // Promise 완료 처리
   promise.then(
     (value) => {
-      status = "success";
-      data = value;
+      state.status = "success";
+      state.data = value;
       // atom 값 업데이트
       atom[VALUE] = value;
       // 구독자들에게 알림
       atom[LISTENERS]?.forEach((listener) => listener(value));
     },
     (err) => {
-      status = "error";
-      error = err;
+      state.status = "error";
+      state.error = err;
     }
   );
 
@@ -203,15 +215,15 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
   const proxyAtom = new Proxy(atom, {
     get(target, property) {
       if (property === VALUE) {
-        // Promise가 아직 완료되지 않았으면 throw (Suspense가 catch)
-        if (status === "pending") throw promise;
+        // Promise가 아직 완료되지 않았으면 throw
+        if (state.status === "pending") throw promise;
         // 에러가 발생했으면 throw
-        if (status === "error") throw error;
+        if (state.status === "error") throw state.error;
 
         // 성공했으면 값 반환
-        return data;
+        return state.data;
       }
-      return target[property as keyof typeof target];
+      return Reflect.get(target, property);
     },
     set(target, property, value) {
       // VALUE 속성에 값을 설정할 때
@@ -222,13 +234,13 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
         // 실제 atom에 값 설정
         target[VALUE] = value;
         // 상태도 업데이트 (이미 완료된 것으로 간주)
-        status = "success";
-        data = value;
+        state.status = "success";
+        state.data = value;
         return true;
       }
       // 다른 속성 (LISTENERS 등)은 그대로 설정
       target[property as keyof typeof target] = value;
-      return true;
+      return Reflect.set(target, property, value);
     },
   });
 
