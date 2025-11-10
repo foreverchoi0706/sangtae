@@ -56,23 +56,21 @@ describe("필수 기능 - Atom 생성 및 관리", () => {
 
       subscribe(atom, callback);
 
-      // 초기값으로 콜백이 한 번 호출됨
-      expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(0);
+      expect(callback).not.toHaveBeenCalled();
 
       // 다른 값으로 설정하면 콜백 호출
       set(atom, 10);
-      expect(callback).toHaveBeenCalledTimes(2);
-      expect(callback).toHaveBeenCalledWith(10);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenLastCalledWith(10);
 
       // 같은 값으로 설정하면 콜백 호출 안 됨
       set(atom, 10);
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
 
       // 다른 값으로 설정하면 다시 콜백 호출
       set(atom, 20);
-      expect(callback).toHaveBeenCalledTimes(3);
-      expect(callback).toHaveBeenCalledWith(20);
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenLastCalledWith(20);
     });
 
     it("NaN 값도 올바르게 처리해야 함", () => {
@@ -80,12 +78,11 @@ describe("필수 기능 - Atom 생성 및 관리", () => {
       const callback = vi.fn();
 
       subscribe(atom, callback);
-      expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(NaN);
+      expect(callback).not.toHaveBeenCalled();
 
       // NaN은 Object.is로 비교하면 같다고 판단됨
       set(atom, NaN);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
     });
 
     it("0과 -0을 다른 값으로 처리해야 함", () => {
@@ -93,11 +90,12 @@ describe("필수 기능 - Atom 생성 및 관리", () => {
       const callback = vi.fn();
 
       subscribe(atom, callback);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       set(atom, -0);
       // Object.is(0, -0)는 false이므로 콜백이 호출됨
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenLastCalledWith(-0);
     });
 
     it("객체 참조가 다르면 다른 값으로 처리해야 함", () => {
@@ -105,10 +103,11 @@ describe("필수 기능 - Atom 생성 및 관리", () => {
       const callback = vi.fn();
 
       subscribe(atom, callback);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       set(atom, { value: 1 }); // 같은 내용이지만 다른 참조
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenLastCalledWith({ value: 1 });
     });
   });
 });
@@ -121,18 +120,16 @@ describe("필수 기능 - 구독자 관리", () => {
 
       subscribe(atom, callback);
 
-      // 초기값으로 즉시 호출됨
-      expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(0);
+      expect(callback).not.toHaveBeenCalled();
 
       // 값 변경 시 호출됨
       set(atom, 1);
-      expect(callback).toHaveBeenCalledTimes(2);
-      expect(callback).toHaveBeenCalledWith(1);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenLastCalledWith(1);
 
       set(atom, 2);
-      expect(callback).toHaveBeenCalledTimes(3);
-      expect(callback).toHaveBeenCalledWith(2);
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenLastCalledWith(2);
     });
 
     it("여러 구독자를 등록할 수 있어야 함", () => {
@@ -145,16 +142,15 @@ describe("필수 기능 - 구독자 관리", () => {
       subscribe(atom, callback2);
       subscribe(atom, callback3);
 
-      // 각 구독자가 초기값으로 호출됨
-      expect(callback1).toHaveBeenCalledTimes(1);
-      expect(callback2).toHaveBeenCalledTimes(1);
-      expect(callback3).toHaveBeenCalledTimes(1);
+      expect(callback1).not.toHaveBeenCalled();
+      expect(callback2).not.toHaveBeenCalled();
+      expect(callback3).not.toHaveBeenCalled();
 
       // 값 변경 시 모든 구독자가 호출됨
       set(atom, 10);
-      expect(callback1).toHaveBeenCalledTimes(2);
-      expect(callback2).toHaveBeenCalledTimes(2);
-      expect(callback3).toHaveBeenCalledTimes(2);
+      expect(callback1).toHaveBeenCalledTimes(1);
+      expect(callback2).toHaveBeenCalledTimes(1);
+      expect(callback3).toHaveBeenCalledTimes(1);
     });
 
     it("구독 해지 함수를 반환해야 함", () => {
@@ -170,16 +166,16 @@ describe("필수 기능 - 구독자 관리", () => {
       const callback = vi.fn();
 
       const unsubscribe = subscribe(atom, callback);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       set(atom, 1);
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
 
       unsubscribe();
 
       set(atom, 2);
       // 구독 해지 후에는 호출되지 않음
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it("여러 구독자 중 일부만 해지할 수 있어야 함", () => {
@@ -192,17 +188,21 @@ describe("필수 기능 - 구독자 관리", () => {
       subscribe(atom, callback2);
       subscribe(atom, callback3);
 
+      expect(callback1).not.toHaveBeenCalled();
+      expect(callback2).not.toHaveBeenCalled();
+      expect(callback3).not.toHaveBeenCalled();
+
       set(atom, 1);
-      expect(callback1).toHaveBeenCalledTimes(2);
-      expect(callback2).toHaveBeenCalledTimes(2);
-      expect(callback3).toHaveBeenCalledTimes(2);
+      expect(callback1).toHaveBeenCalledTimes(1);
+      expect(callback2).toHaveBeenCalledTimes(1);
+      expect(callback3).toHaveBeenCalledTimes(1);
 
       unsubscribe1();
 
       set(atom, 2);
-      expect(callback1).toHaveBeenCalledTimes(2); // 더 이상 호출 안 됨
-      expect(callback2).toHaveBeenCalledTimes(3);
-      expect(callback3).toHaveBeenCalledTimes(3);
+      expect(callback1).toHaveBeenCalledTimes(1); // 더 이상 호출 안 됨
+      expect(callback2).toHaveBeenCalledTimes(2);
+      expect(callback3).toHaveBeenCalledTimes(2);
     });
 
     it("GC-friendly: 마지막 구독자가 해지한 후에도 atom이 정상 작동해야 함", () => {
@@ -210,10 +210,10 @@ describe("필수 기능 - 구독자 관리", () => {
       const callback = vi.fn();
 
       const unsubscribe = subscribe(atom, callback);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       set(atom, 1);
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
 
       unsubscribe();
 
@@ -223,12 +223,11 @@ describe("필수 기능 - 구독자 관리", () => {
       // 새로운 구독자를 추가할 수 있어야 함
       const newCallback = vi.fn();
       subscribe(atom, newCallback);
-      expect(newCallback).toHaveBeenCalledTimes(1);
-      expect(newCallback).toHaveBeenCalledWith(1);
+      expect(newCallback).not.toHaveBeenCalled();
 
       set(atom, 2);
-      expect(newCallback).toHaveBeenCalledTimes(2);
-      expect(newCallback).toHaveBeenCalledWith(2);
+      expect(newCallback).toHaveBeenCalledTimes(1);
+      expect(newCallback).toHaveBeenLastCalledWith(2);
     });
 
     it("같은 콜백을 여러 번 구독할 수 있어야 함", () => {
@@ -238,9 +237,12 @@ describe("필수 기능 - 구독자 관리", () => {
       subscribe(atom, callback);
       subscribe(atom, callback);
 
+      expect(callback).not.toHaveBeenCalled();
+
       set(atom, 1);
-      // 같은 콜백이 두 번 등록되었으므로 두 번 호출됨
-      expect(callback).toHaveBeenCalledTimes(3); // 초기값 1번 + set 호출 2번
+      // Set은 같은 참조를 중복 저장하지 않으므로 한 번만 등록됨
+      expect(callback).toHaveBeenCalledTimes(1); // set 호출로 한 번
+      expect(callback).toHaveBeenCalledWith(1);
     });
   });
 });
@@ -266,18 +268,18 @@ describe("선택 기능 - 파생 Atom", () => {
       subscribe(derivedAtom, callback);
 
       expect(get(derivedAtom)).toBe(30);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       // atomA 변경
       set(atomA, 15);
       expect(get(derivedAtom)).toBe(35);
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
       expect(callback).toHaveBeenLastCalledWith(35);
 
       // atomB 변경
       set(atomB, 25);
       expect(get(derivedAtom)).toBe(40);
-      expect(callback).toHaveBeenCalledTimes(3);
+      expect(callback).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenLastCalledWith(40);
     });
 
@@ -289,7 +291,7 @@ describe("선택 기능 - 파생 Atom", () => {
       const callback = vi.fn();
 
       subscribe(derivedAtom, callback);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       // 값이 변경되지 않는 경우
       set(atomA, 5);
@@ -376,15 +378,14 @@ describe("선택 기능 - 비동기 Atom", () => {
       const asyncAtom = createAsyncAtom(promise);
       const callback = vi.fn();
 
-      // Promise가 완료된 후에 구독
+      subscribe(asyncAtom, callback);
+
+      // Promise 완료를 기다린 뒤 콜백 호출 여부 확인
       await promise;
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      subscribe(asyncAtom, callback);
-
-      // 구독 시점에 이미 값이 있으므로 즉시 호출됨
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(42);
+      expect(callback).toHaveBeenLastCalledWith(42);
     });
 
     it("Promise가 완료되기 전에 get 호출 시 Promise를 throw해야 함 (Suspense 대응)", async () => {
@@ -426,19 +427,20 @@ describe("선택 기능 - 비동기 Atom", () => {
       const asyncAtom = createAsyncAtom(promise);
       const callback = vi.fn();
 
-      // Promise가 완료된 후에 구독
+      // Promise 완료 전에 구독
+      subscribe(asyncAtom, callback);
+
       await promise;
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      subscribe(asyncAtom, callback);
+      // Promise 완료 시 callback이 호출됨
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(42);
+      expect(callback).toHaveBeenLastCalledWith(42);
 
       // 값을 직접 설정
-      const callCountBeforeSet = callback.mock.calls.length;
       set(asyncAtom, 100);
       // set 호출 시 Proxy의 set 핸들러에서 listeners를 순회하면서 callback이 호출됨
-      expect(callback.mock.calls.length).toBeGreaterThan(callCountBeforeSet);
+      expect(callback).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenLastCalledWith(100);
 
       // 또한 get 호출 시에도 문제가 없어야 함
@@ -458,17 +460,16 @@ describe("선택 기능 - 배치 업데이트", () => {
       subscribe(atomA, callbackA);
       subscribe(atomB, callbackB);
 
-      // 초기값으로 각각 한 번씩 호출됨
-      expect(callbackA).toHaveBeenCalledTimes(1);
-      expect(callbackB).toHaveBeenCalledTimes(1);
+      expect(callbackA).not.toHaveBeenCalled();
+      expect(callbackB).not.toHaveBeenCalled();
 
       // 연속으로 set 호출
       set(atomA, 1);
       set(atomB, 2);
 
       // 각 atom의 구독자가 각각 호출됨
-      expect(callbackA).toHaveBeenCalledTimes(2); // 초기값 + set
-      expect(callbackB).toHaveBeenCalledTimes(2); // 초기값 + set
+      expect(callbackA).toHaveBeenCalledTimes(1);
+      expect(callbackB).toHaveBeenCalledTimes(1);
 
       // 값이 올바르게 업데이트되었는지 확인
       expect(get(atomA)).toBe(1);
@@ -481,7 +482,7 @@ describe("선택 기능 - 배치 업데이트", () => {
 
       subscribe(atom, callback);
 
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       // 연속으로 set 호출
       set(atom, 1);
@@ -489,11 +490,10 @@ describe("선택 기능 - 배치 업데이트", () => {
       set(atom, 3);
 
       // 각 set 호출마다 콜백이 호출됨
-      expect(callback).toHaveBeenCalledTimes(4); // 초기값 + 3번의 set
-      expect(callback).toHaveBeenNthCalledWith(1, 0);
-      expect(callback).toHaveBeenNthCalledWith(2, 1);
-      expect(callback).toHaveBeenNthCalledWith(3, 2);
-      expect(callback).toHaveBeenNthCalledWith(4, 3);
+      expect(callback).toHaveBeenCalledTimes(3);
+      expect(callback).toHaveBeenNthCalledWith(1, 1);
+      expect(callback).toHaveBeenNthCalledWith(2, 2);
+      expect(callback).toHaveBeenNthCalledWith(3, 3);
 
       expect(get(atom)).toBe(3);
     });
@@ -506,15 +506,14 @@ describe("선택 기능 - 배치 업데이트", () => {
       subscribe(atomA, sharedCallback);
       subscribe(atomB, sharedCallback);
 
-      // 초기값으로 각각 한 번씩 호출됨 (총 2번)
-      expect(sharedCallback).toHaveBeenCalledTimes(2);
+      expect(sharedCallback).not.toHaveBeenCalled();
 
       // 연속으로 set 호출
       set(atomA, 1);
       set(atomB, 2);
 
-      // 각 atom 변경 시마다 콜백이 호출됨 (총 4번: 초기값 2번 + set 2번)
-      expect(sharedCallback).toHaveBeenCalledTimes(4);
+      // 각 atom 변경 시마다 콜백이 호출됨 (총 2번)
+      expect(sharedCallback).toHaveBeenCalledTimes(2);
     });
 
     it("파생 atom이 의존하는 여러 atom을 연속으로 업데이트하면 파생 atom도 각각 업데이트되어야 함", () => {
@@ -526,14 +525,14 @@ describe("선택 기능 - 배치 업데이트", () => {
       subscribe(derivedAtom, callback);
 
       expect(get(derivedAtom)).toBe(30);
-      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).not.toHaveBeenCalled();
 
       // 연속으로 set 호출
       set(atomA, 15);
       set(atomB, 25);
 
       // 각 의존 atom 변경 시마다 파생 atom이 업데이트됨
-      expect(callback).toHaveBeenCalledTimes(3); // 초기값 + atomA 변경 + atomB 변경
+      expect(callback).toHaveBeenCalledTimes(2); // atomA 변경 + atomB 변경
       expect(get(derivedAtom)).toBe(40); // 15 + 25
     });
 
@@ -546,16 +545,16 @@ describe("선택 기능 - 배치 업데이트", () => {
       subscribe(atomA, callbackA);
       subscribe(atomB, callbackB);
 
-      expect(callbackA).toHaveBeenCalledTimes(1);
-      expect(callbackB).toHaveBeenCalledTimes(1);
+      expect(callbackA).not.toHaveBeenCalled();
+      expect(callbackB).not.toHaveBeenCalled();
 
       // 같은 값으로 set 호출
       set(atomA, 1);
       set(atomB, 2);
 
       // 콜백이 호출되지 않아야 함
-      expect(callbackA).toHaveBeenCalledTimes(1);
-      expect(callbackB).toHaveBeenCalledTimes(1);
+      expect(callbackA).not.toHaveBeenCalled();
+      expect(callbackB).not.toHaveBeenCalled();
     });
 
     it("배치 업데이트 시 각 atom의 값이 올바르게 반영되어야 함", () => {

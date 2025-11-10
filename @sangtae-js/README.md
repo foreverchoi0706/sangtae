@@ -72,6 +72,16 @@ try {
 }
 ```
 
+또는
+
+```ts
+const asyncAtom = createAsyncAtom(Promise.resolve(1));
+
+const value = await getAsync(asyncAtom);
+
+console.log(value);
+```
+
 - 같은 `Promise`를 넘기면 내부 캐시 덕분에 항상 동일한 atom을 돌려줍니다.
 - `get` 호출 시 `pending`이면 원래 Promise를 throw하여 React Suspense 같은 환경과 자연스럽게 맞물립니다.
 - `set`으로 값을 교체하면 자동으로 상태가 `success`로 바뀌어 재활용할 수 있습니다.
@@ -108,16 +118,7 @@ function Counter() {
 }
 ```
 
-## API 레퍼런스
-
-| 함수                          | 설명                                                                                                    |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `createAtom(initialValue)`    | 초깃값으로 새로운 atom을 만듭니다.                                                                      |
-| `createDerivedAtom(callback)` | `callback(get)` 안에서 참조한 atom을 추적해 파생 값을 계산합니다.                                       |
-| `createAsyncAtom(promise)`    | `Promise`를 기반으로 한 비동기 atom을 만듭니다. Suspense와 호환됩니다.                                  |
-| `get(atom)`                   | atom의 현재 값을 읽습니다. 비동기 atom의 경우 `Promise` 또는 에러를 throw할 수 있습니다.                |
-| `set(atom, newValue)`         | atom 값을 새 값으로 갱신하고, 변경 시 구독자에게 통지합니다.                                            |
-| `subscribe(atom, listener)`   | 값이 바뀔 때마다 `listener`를 실행하고, 즉시 현재 값을 한 번 호출합니다. 반환값은 구독 해제 함수입니다. |
+## API
 
 ### `Listener<T>`
 
@@ -127,6 +128,30 @@ type Listener<T> = (value: T) => void;
 
 - 필요한 곳에서만 구독해 메모리 사용량을 최소화할 수 있습니다.
 - 마지막 구독자가 해제되면 내부 `Set`이 정리되어 GC 대상이 됩니다.
+
+### `Atom<T>`
+
+```ts
+type Atom<T> = Readonly<{
+  [VALUE]: T;
+  [LISTENERS]: Set<Listener<T>> | null;
+}>;
+```
+
+- 내부적으로 `unique symbol` 키(`VALUE`, `LISTENERS`)를 사용해 값과 리스너 목록을 은닉합니다.
+- 외부에서는 `get`, `set`, `subscribe` 같은 함수를 통해서만 상태를 읽거나 변경할 수 있습니다.
+- `Atom<T>` 타입은 불변(readonly)으로 노출되어 직접 속성을 수정할 수 없으며, 순수한 데이터 컨테이너 역할만 담당합니다.
+
+## 함수
+
+| 이름                          | 설명                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `createAtom(initialValue)`    | 초깃값으로 새로운 atom을 만듭니다.                                                                      |
+| `createDerivedAtom(callback)` | `callback(get)` 안에서 참조한 atom을 추적해 파생 값을 계산합니다.                                       |
+| `createAsyncAtom(promise)`    | `Promise`를 기반으로 한 비동기 atom을 만듭니다. Suspense와 호환됩니다.                                  |
+| `get(atom)`                   | atom의 현재 값을 읽습니다. 비동기 atom의 경우 `Promise` 또는 에러를 throw할 수 있습니다.                |
+| `set(atom, newValue)`         | atom 값을 새 값으로 갱신하고, 변경 시 구독자에게 통지합니다.                                            |
+| `subscribe(atom, listener)`   | 값이 바뀔 때마다 `listener`를 실행하고, 즉시 현재 값을 한 번 호출합니다. 반환값은 구독 해제 함수입니다. |
 
 ## 개발 스크립트
 

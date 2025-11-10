@@ -28,7 +28,7 @@ export const createAtom = <T>(initialValue: T): Atom<T> => {
 
 /**
  * @description 새로운 파생 아톰을 생성합니다
- * @param callback 아톰의 값이 변경될 때 호출되는 콜백함수
+ * @param {(get: <U>(atom: Atom<U>) => U) => T} callback 아톰의 값이 변경될 때 호출되는 콜백함수
  * @returns {Atom<T>} 아톰 객체
  */
 export const createDerivedAtom = <T>(
@@ -59,7 +59,7 @@ export const createDerivedAtom = <T>(
   return derivedAtom;
 };
 
-// 비동기 atom 캐시 (같은 Promise에 대해 같은 atom 반환)
+// 비동기 atom 캐시 (같은 Promise에 대해 같은 Proxy atom 반환)
 // WeakMap을 사용하여 Promise가 더 이상 참조되지 않으면 자동으로 GC 처리
 const asyncAtomCache = new WeakMap<Promise<any>, Atom<any>>();
 
@@ -69,7 +69,7 @@ const asyncAtomCache = new WeakMap<Promise<any>, Atom<any>>();
  * @returns {Atom<T>} 비동기 아톰 객체
  */
 export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
-  // 이미 캐시된 atom이 있으면 반환
+  // 이미 캐시된 Proxy atom이 있으면 반환
   if (asyncAtomCache.has(promise)) {
     return asyncAtomCache.get(promise) as Atom<T>;
   }
@@ -79,18 +79,21 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
   let data: T | undefined;
   let error: any;
 
+  // atom 생성 (초기값은 undefined이지만, get 호출 시 Promise throw)
+  const atom: InternalAtom<T> = {
+    [VALUE]: undefined as any, // 타입 체크를 위한 임시 값
+    [LISTENERS]: null,
+  };
+
   // Promise 완료 처리
   promise.then(
     (value) => {
       status = "success";
       data = value;
       // atom 값 업데이트
-      const atom = asyncAtomCache.get(promise) as InternalAtom<T>;
-      if (atom) {
-        atom[VALUE] = value;
-        // 구독자들에게 알림
-        atom[LISTENERS]?.forEach((listener) => listener(value));
-      }
+      atom[VALUE] = value;
+      // 구독자들에게 알림
+      atom[LISTENERS]?.forEach((listener) => listener(value));
     },
     (err) => {
       status = "error";
@@ -98,17 +101,8 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
     }
   );
 
-  // atom 생성 (초기값은 undefined이지만, get 호출 시 Promise throw)
-  const atom: InternalAtom<T> = {
-    [VALUE]: undefined as any, // 타입 체크를 위한 임시 값
-    [LISTENERS]: null,
-  };
-
-  // 캐시에 저장
-  asyncAtomCache.set(promise, atom);
-
   // Proxy를 사용해서 get 호출 시 Suspense 대응
-  return new Proxy(atom, {
+  const proxyAtom = new Proxy(atom, {
     get(target, property) {
       if (property === VALUE) {
         // Promise가 아직 완료되지 않았으면 throw (Suspense가 catch)
@@ -124,13 +118,14 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
     set(target, property, value) {
       // VALUE 속성에 값을 설정할 때
       if (property === VALUE) {
+        if (Object.is(target[VALUE], value)) {
+          return true;
+        }
         // 실제 atom에 값 설정
         target[VALUE] = value;
         // 상태도 업데이트 (이미 완료된 것으로 간주)
         status = "success";
         data = value;
-        // 구독자들에게 알림
-        target[LISTENERS]?.forEach((listener) => listener(value));
         return true;
       }
       // 다른 속성 (LISTENERS 등)은 그대로 설정
@@ -138,6 +133,11 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
       return true;
     },
   });
+
+  // Proxy atom을 캐시에 저장
+  asyncAtomCache.set(promise, proxyAtom);
+
+  return proxyAtom;
 };
 
 /**
@@ -146,6 +146,22 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
  * @returns {T} atom의 현재 상태 값
  */
 export const get = <T>(atom: Atom<T>): T => atom[VALUE];
+
+/**
+ * @description (추가기능) 비동기 atom의 값을 반환합니다
+ * @param {Atom<T>} atom atom 객체
+ * @returns {Promise<T>} atom의 현재 상태 값을 담은 Promise 객체
+ */
+export const getAsync = async <T>(atom: Atom<T>) => {
+  try {
+    return get(atom);
+  } catch (thrown) {
+    if (thrown instanceof Promise) {
+      return (await thrown) as Promise<T>;
+    }
+    throw thrown;
+  }
+};
 
 /**
  * @description atom의 값을 `newValue`로 업데이트합니다
@@ -176,7 +192,7 @@ export const subscribe = <T>(atom: Atom<T>, callback: Listener<T>) => {
   }
 
   listeners.add(callback);
-  callback(atom[VALUE]);
+  // callback(atom[VALUE]);
 
   return () => {
     // atom에서 현재 listeners를 가져와서 실제 상태 확인
