@@ -19,24 +19,25 @@ const emit = defineEmits<{
   (event: "refresh"): void;
 }>();
 
-const REMOTE_TODO_TEMPLATES: Array<Pick<RemoteTodo, "title" | "description">> = [
-  {
-    title: "API 문서 검토",
-    description: "README 요약을 확인하고 팀 공유 준비",
-  },
-  {
-    title: "디자인 동기화",
-    description: "UI 컴포넌트 상태와 실제 데이터를 비교",
-  },
-  {
-    title: "렌더 카운트 점검",
-    description: "변경된 atom이 컴포넌트에 미치는 영향 확인",
-  },
-  {
-    title: "배포 체크리스트",
-    description: "build, lint, 테스트 명령어가 모두 통과하는지 확인",
-  },
-];
+const REMOTE_TODO_TEMPLATES: Array<Pick<RemoteTodo, "title" | "description">> =
+  [
+    {
+      title: "API 문서 검토",
+      description: "README 요약을 확인하고 팀 공유 준비",
+    },
+    {
+      title: "디자인 동기화",
+      description: "UI 컴포넌트 상태와 실제 데이터를 비교",
+    },
+    {
+      title: "렌더 카운트 점검",
+      description: "변경된 atom이 컴포넌트에 미치는 영향 확인",
+    },
+    {
+      title: "배포 체크리스트",
+      description: "build, lint, 테스트 명령어가 모두 통과하는지 확인",
+    },
+  ];
 
 const loadRemoteTodos = (version: number): Promise<RemoteTodo[]> =>
   new Promise((resolve) => {
@@ -72,7 +73,9 @@ const completedCount = computed(() => {
   return todos.value.filter((todo) => todo.completed).length;
 });
 
-const totalCount = computed(() => (Array.isArray(todos.value) ? todos.value.length : 0));
+const totalCount = computed(() =>
+  Array.isArray(todos.value) ? todos.value.length : 0
+);
 
 const renderTrigger = ref(0);
 
@@ -95,15 +98,18 @@ const onToggleComplete = (id: number) => {
 
 const onCompleteAll = () => {
   if (!Array.isArray(todos.value)) return;
-  setTodos(todos.value.map((todo) => ({ ...todo, completed: true })));
+  const isAllCompleted = todos.value.every(({ completed }) => completed);
+
+  setTodos(
+    isAllCompleted
+      ? todos.value
+      : todos.value.map((todo) => ({ ...todo, completed: true }))
+  );
 };
 </script>
 
 <template>
-  <article
-    v-if="!isLoading"
-    class="atom-card atom-card--wide async-card"
-  >
+  <article v-if="!isLoading" class="atom-card atom-card--wide async-card">
     <header class="atom-card__header">
       <h3>createAsyncAtom 데모</h3>
       <RenderBadge :trigger="renderTrigger" />
@@ -147,4 +153,3 @@ const onCompleteAll = () => {
     <p class="atom-card__hint">비동기 데이터를 불러오는 중입니다...</p>
   </article>
 </template>
-

@@ -226,7 +226,13 @@ const AsyncTodosCardContent = ({
   };
 
   const onCompleteAll = () => {
-    setTodos(todos.map((todo) => ({ ...todo, completed: true })));
+    const isAllCompleted = todos.every(({ completed }) => completed);
+
+    setTodos(
+      isAllCompleted
+        ? todos
+        : todos.map((todo) => ({ ...todo, completed: true }))
+    );
   };
 
   return (
