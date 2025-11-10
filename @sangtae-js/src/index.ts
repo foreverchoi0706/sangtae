@@ -9,7 +9,11 @@ type InternalAtom<T> = {
 };
 
 // async atom의 현재 상태·대기중인 Promise·에러 정보를 모아둔 객체
-type Status = "success" | "pending" | "error";
+enum ASYNC_ATOM_STATUS {
+  SUCCESS = "SUCCESS",
+  PENDING = "PENDING",
+  ERROR = "ERROR",
+}
 
 /** 구독 리스너*/
 export type Listener<T> = (value: T) => void;
@@ -19,15 +23,13 @@ export type Atom<T> = Readonly<InternalAtom<T>>;
 
 /**
  * @description 초기값을 받아 새로운 atom을 생성합니다
- * @param {T} initialValue
+ * @param {T} initialValue 초기값
  * @returns {Atom<T>} 아톰 객체
  */
-export const createAtom = <T>(initialValue: T): Atom<T> => {
-  return {
-    [VALUE]: initialValue,
-    [LISTENERS]: null,
-  };
-};
+export const createAtom = <T>(initialValue: T): Atom<T> => ({
+  [VALUE]: initialValue,
+  [LISTENERS]: null,
+});
 
 /**
  * @description 새로운 파생 아톰을 생성합니다
@@ -38,26 +40,26 @@ export const createDerivedAtom = <T>(
   callback: (get: <U>(atom: Atom<U>) => U) => T
 ): Atom<T> => {
   const state: {
-    status: Status;
+    status: ASYNC_ATOM_STATUS;
     suspense: Promise<unknown> | null;
     error: unknown;
   } = {
-    status: "pending",
+    status: ASYNC_ATOM_STATUS.PENDING,
     suspense: null,
     error: undefined,
   };
 
   // 직전 평가에서 읽힌 atom 집합을 추적해서 구독을 자동으로 관리
-  let atoms = new Set<Atom<unknown>>();
   const subscriptions = new Map<Atom<unknown>, () => void>();
 
   // 상태만 바꾸는 대신 관련 필드를 한 번에 초기화하는 유틸
-  const setStatus = (status: Status) => {
+  const setStatus = (status: ASYNC_ATOM_STATUS) => {
     state.status = status;
-    if (status !== "error") state.error = undefined;
-    if (status !== "pending") state.suspense = null;
+    if (status !== ASYNC_ATOM_STATUS.ERROR) state.error = undefined;
+    if (status !== ASYNC_ATOM_STATUS.PENDING) state.suspense = null;
   };
 
+  let atoms = new Set<Atom<unknown>>();
   // 새로 읽힌 atom들과 비교해 끊어진 구독은 정리하고 새 의존성은 구독
   const applySubscriptions = (nextTrackedAtoms: Set<Atom<unknown>>) => {
     atoms.forEach((atom) => {
@@ -93,7 +95,7 @@ export const createDerivedAtom = <T>(
 
     try {
       const newValue = callback(trackedGet);
-      setStatus("success");
+      setStatus(ASYNC_ATOM_STATUS.SUCCESS);
       applySubscriptions(nextTrackedAtoms);
 
       if (!Object.is(derivedAtom[VALUE], newValue)) {
@@ -105,7 +107,7 @@ export const createDerivedAtom = <T>(
 
       if (thrown instanceof Promise) {
         // callback이 Promise를 던졌을 때 Suspense 플로우를 유지하도록 처리
-        state.status = "pending";
+        state.status = ASYNC_ATOM_STATUS.PENDING;
         state.error = undefined;
         state.suspense = thrown;
         thrown
@@ -116,14 +118,14 @@ export const createDerivedAtom = <T>(
           })
           .catch((err) => {
             if (state.suspense === thrown) {
-              state.status = "error";
+              state.status = ASYNC_ATOM_STATUS.ERROR;
               state.error = err;
             }
           });
         return;
       }
 
-      setStatus("error");
+      setStatus(ASYNC_ATOM_STATUS.ERROR);
       state.error = thrown;
 
       if (!suppressErrors) throw thrown;
@@ -136,10 +138,10 @@ export const createDerivedAtom = <T>(
     // 값 읽을 때 상태에 따라 Suspense 또는 에러를 그대로 전달
     get(target, property) {
       if (property === VALUE) {
-        if (state.status === "pending" && state.suspense) {
+        if (state.status === ASYNC_ATOM_STATUS.PENDING && state.suspense) {
           throw state.suspense;
         }
-        if (state.status === "error") {
+        if (state.status === ASYNC_ATOM_STATUS.ERROR) {
           throw state.error;
         }
       }
@@ -152,7 +154,7 @@ export const createDerivedAtom = <T>(
           return true;
         }
         target[VALUE] = value as T;
-        setStatus("success");
+        setStatus(ASYNC_ATOM_STATUS.SUCCESS);
         return true;
       }
 
@@ -163,8 +165,8 @@ export const createDerivedAtom = <T>(
   return proxyAtom as Atom<T>;
 };
 
-// 비동기 atom 캐시 (같은 Promise에 대해 같은 Proxy atom 반환)
-// WeakMap을 사용하여 Promise가 더 이상 참조되지 않으면 자동으로 GC 처리
+//
+// 같은 Promise에 대해 같은 Proxy atom 반환 atom 캐시, WeakMap을 사용하여 Promise가 더 이상 참조되지 않으면 자동으로 GC 처리
 const asyncAtomCache = new WeakMap<Promise<any>, Atom<any>>();
 
 /**
@@ -180,11 +182,11 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
 
   // 초기 상태: Promise가 아직 완료되지 않음
   const state: {
-    status: Status;
+    status: ASYNC_ATOM_STATUS;
     data: T | undefined;
     error: unknown;
   } = {
-    status: "pending",
+    status: ASYNC_ATOM_STATUS.PENDING,
     data: undefined,
     error: undefined,
   };
@@ -198,16 +200,14 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
   // Promise 완료 처리
   promise.then(
     (value) => {
-      state.status = "success";
+      // atom 값 업데이트 후   // 구독자들에게 알림
+      state.status = ASYNC_ATOM_STATUS.SUCCESS;
       state.data = value;
-      // atom 값 업데이트
-      atom[VALUE] = value;
-      // 구독자들에게 알림
-      atom[LISTENERS]?.forEach((listener) => listener(value));
+      set(atom, value);
     },
-    (err) => {
-      state.status = "error";
-      state.error = err;
+    (error) => {
+      state.status = ASYNC_ATOM_STATUS.ERROR;
+      state.error = error;
     }
   );
 
@@ -216,10 +216,9 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
     get(target, property) {
       if (property === VALUE) {
         // Promise가 아직 완료되지 않았으면 throw
-        if (state.status === "pending") throw promise;
+        if (state.status === ASYNC_ATOM_STATUS.PENDING) throw promise;
         // 에러가 발생했으면 throw
-        if (state.status === "error") throw state.error;
-
+        if (state.status === ASYNC_ATOM_STATUS.ERROR) throw state.error;
         // 성공했으면 값 반환
         return state.data;
       }
@@ -234,7 +233,7 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
         // 실제 atom에 값 설정
         target[VALUE] = value;
         // 상태도 업데이트 (이미 완료된 것으로 간주)
-        state.status = "success";
+        state.status = ASYNC_ATOM_STATUS.SUCCESS;
         state.data = value;
         return true;
       }
@@ -279,12 +278,9 @@ export const getAsync = async <T>(atom: Atom<T>) => {
  * @param {T} newValue 새로운 값
  */
 export const set = <T>(atom: Atom<T>, newValue: T) => {
-  if (!Object.is(atom[VALUE], newValue)) {
-    // 값이 변경되었다면 값을 업데이트하고 구독자에게 알림
-    (atom as InternalAtom<T>)[VALUE] = newValue;
-
-    atom[LISTENERS]?.forEach((listener) => listener(newValue));
-  }
+  if (Object.is(atom[VALUE], newValue)) return;
+  (atom as InternalAtom<T>)[VALUE] = newValue;
+  atom[LISTENERS]?.forEach((listener) => listener(newValue));
 };
 
 /**

@@ -21,11 +21,57 @@
 ## 3. 시스템 구조 개요
 
 - Atom은 내부적으로 값과 리스너 Set을 고유 Symbol 키로 숨기고 있습니다.
-- 파생 Atom은 `callback(get)` 패턴으로 참조한 Atom을 셋업 시 자동 수집하고, 각 의존 Atom의 업데이트를 구독합니다.
-- 비동기 Atom은 Promise 상태를 Proxy로 감싸 Suspense 패턴과 호환되도록 구성했습니다.
+- 파생 Atom은 `callback(get)` 패턴으로 접근한 Atom을 추적하고 Map 기반으로 구독을 관리합니다. 평가 중 Promise를 던지면 Suspense 플로우를 유지하면서 상태를 `PENDING`으로 표시합니다.
+- 비동기 Atom은 Promise 상태를 Proxy로 감싸 Suspense 패턴과 호환되도록 구성했으며, 동일 Promise에 대해 캐싱합니다.
 - React 훅은 최소 의존으로 `useSyncExternalStore`를 통해 구독과 구독 해제, 배치 업데이트를 구현하였습니다.
 
-![sangtae 시스템 구조](./assets/system-architecture.png)
+```mermaid
+graph LR;
+  subgraph Core
+    CA["createAtom"]
+    AT["Atom (VALUE, LISTENERS)"]
+    GET["get(atom)"]
+    SET["set(atom, newValue)"]
+    SUB["subscribe(atom, listener)"]
+  end
+
+  CA --> AT
+  GET --> AT
+  SET --> AT
+  SUB --> AT
+
+  subgraph Derived
+    CDA["createDerivedAtom"]
+    DAT["Derived Atom"]
+  end
+
+  CDA --> DAT
+  DAT -->|"의존성 수집"| GET
+  AT -->|"변경 통지"| DAT
+  DAT -->|"Object.is 비교 후 알림"| SUB
+
+  subgraph Async
+    CAA["createAsyncAtom"]
+    WMC["WeakMap Cache"]
+    AAT["Async Atom Proxy"]
+    GA["getAsync(atom)"]
+  end
+
+  CAA --> WMC
+  WMC --> AAT
+  AAT -->|"status 확인"| GET
+  AAT -->|"Suspense throw"| GA
+
+  subgraph Frameworks
+    REACT["@sangtae-react useAtom"]
+    VUE["@sangtae-vue useAtom"]
+  end
+
+  SUB --> REACT
+  SUB --> VUE
+  REACT -->|"useSyncExternalStore"| REACT_APP["React 컴포넌트"]
+  VUE -->|"Composition API"| VUE_APP["Vue 컴포넌트"]
+```
 
 ## 4. Atom 내부 구조
 
@@ -34,7 +80,7 @@
 - Atom은 `VALUE`, `LISTENERS` 두 개의 `Symbol` 키를 가진 객체로 표현됩니다.
 - 외부에서는 `Atom<T>`를 `Readonly`로 노출하여 직접 수정이 불가능하고, 오직 제공된 API로만 접근합니다.
 
-```8:17:@sangtae-js/src/index.ts
+```ts
 type InternalAtom<T> = {
   [VALUE]: T;
   [LISTENERS]: Set<Listener<T>> | null;
@@ -47,12 +93,12 @@ type InternalAtom<T> = {
 - 이 비교는 `NaN`과 `-0` 같은 edge case도 정확히 처리하고, 동일값 재설정에 따른 불필요한 렌더를 차단합니다.
 - 파생 Atom 재계산 시에도 동일 비교를 통해 파생 값이 변하지 않으면 구독자에게 통지하지 않습니다.
 
-### 4.3 구독과 즉시 동기화
+### 4.3 구독과 GC 친화적 처리
 
-- `subscribe`는 최초 등록 시 현재 값을 한 번 즉시 발행하여 구독자와 상태의 일관성을 맞춥니다.
+- `subscribe`는 등록 시 즉시 값을 발행하지 않고, 이후 `set`이나 파생/비동기 Atom에서 값이 변할 때만 콜백을 호출합니다.
 - 내부 `Set`은 중복 리스너를 허용하지 않고, 해지 시 빈 Set이면 `null`로 되돌려 GC 대상이 되도록 구성했습니다.
 
-```170:205:@sangtae-js/src/index.ts
+```ts
 if (!Object.is(atom[VALUE], newValue)) {
   (atom as InternalAtom<T>)[VALUE] = newValue;
   atom[LISTENERS]?.forEach((listener) => listener(newValue));
@@ -70,12 +116,72 @@ if (currentListeners.size === 0) {
 
 ## 5. 파생 Atom 설계 (`createDerivedAtom`)
 
-- 초기 생성 시 `callback(get)`을 실행하면서 접근한 Atom을 `Set`에 수집합니다.
-- 각 의존 Atom을 `subscribe`하고, 원본 값이 바뀌면 콜백을 다시 실행하여 새 값을 계산합니다.
-- 새 파생 값과 이전 값을 `Object.is`로 비교하여 바뀐 경우에만 파생 Atom의 리스너에게 알림을 보냅니다.
-- 파생 Atom도 일반 Atom처럼 동작하므로 React/비 React 환경에서 동일 API를 사용할 수 있습니다.
+- 초기 생성 시 `callback(get)`을 실행하면서 접근한 Atom을 추적 `Set`에 담고, 기존 구독과 비교하여 Map으로 관리합니다.
+- 각 의존 Atom을 `subscribe`하여 변경 시 `evaluate`를 재실행하고, 끊어진 의존성은 즉시 구독을 해제합니다.
+- 평가 중 Promise가 던져지면 상태를 `PENDING`으로 두고 같은 Promise가 해결될 때까지 Suspense 플로우를 유지합니다. 해결되면 자동으로 재평가하고, 에러면 상태를 `ERROR`로 저장합니다.
+- Proxy가 `VALUE` 접근을 가로채서 `PENDING`이면 Promise, `ERROR`면 에러를 throw하여 React Suspense나 try/catch에서 그대로 활용할 수 있습니다.
+- 새 파생 값과 이전 값을 `Object.is`로 비교해 달라졌을 때만 리스너에게 알림을 보냅니다.
+- 파생 Atom도 일반 Atom처럼 노출되므로 React/비 React 환경에서 동일 API를 사용할 수 있습니다.
 
-![파생 Atom 업데이트 흐름](./assets/derived-sequence.png)
+```ts
+const evaluate = (suppressErrors = false) => {
+  const nextTrackedAtoms = new Set<Atom<unknown>>();
+  const trackedGet = <U>(atom: Atom<U>) => {
+    nextTrackedAtoms.add(atom as Atom<unknown>);
+    return get(atom);
+  };
+
+  try {
+    const newValue = callback(trackedGet);
+    setStatus(ASYNC_ATOM_STATUS.SUCCESS);
+    applySubscriptions(nextTrackedAtoms);
+
+    if (!Object.is(derivedAtom[VALUE], newValue)) {
+      derivedAtom[VALUE] = newValue;
+      derivedAtom[LISTENERS]?.forEach((listener) => listener(newValue));
+    }
+  } catch (thrown) {
+    applySubscriptions(nextTrackedAtoms);
+    if (thrown instanceof Promise) {
+      state.status = ASYNC_ATOM_STATUS.PENDING;
+      state.suspense = thrown;
+      thrown.then(() => {
+        if (state.suspense === thrown) evaluate(true);
+      });
+      return;
+    }
+    setStatus(ASYNC_ATOM_STATUS.ERROR);
+    state.error = thrown;
+    if (!suppressErrors) throw thrown;
+  }
+};
+```
+
+```mermaid
+sequenceDiagram
+  participant D as 파생 Atom
+  participant C as 콜백 callback(get)
+  participant S as 의존 Atom
+  participant M as 구독 Map
+  participant L as 구독자
+
+  C->>S: trackedGet(atom)
+  D->>M: applySubscriptions(atom)
+  S-->>D: 값 변경 이벤트
+  D->>C: callback(get) 재실행
+  alt 새 값 계산 성공
+    C-->>D: newValue
+    D->>D: setStatus(SUCCESS)
+    D->>L: notify(next) (값 변경 시)
+  else Promise 던짐
+    C-->>D: throw promise
+    D->>D: status = PENDING<br/>state.suspense = promise
+    note right of D: promise 해결 시 evaluate(true)
+  else 오류 발생
+    C-->>D: throw error
+    D->>D: setStatus(ERROR)<br/>state.error = error
+  end
+```
 
 ## 6. 비동기 Atom 설계 (`createAsyncAtom`)
 
@@ -84,7 +190,7 @@ if (currentListeners.size === 0) {
 - `set`으로 값을 교체하면 상태가 `success`로 전환되어 이미 resolve된 값 위에 동기 값을 덮어쓸 수 있습니다.
 - `getAsync`는 내부적으로 `get`을 호출하고, `Promise`가 throw되면 `await`하여 값을 반환합니다.
 
-```62:139:@sangtae-js/src/index.ts
+```ts
 const asyncAtomCache = new WeakMap<Promise<any>, Atom<any>>();
 ...
 if (status === "pending") throw promise;
@@ -92,7 +198,31 @@ if (status === "error") throw error;
 return data;
 ```
 
-![createAsyncAtom 동작 흐름](./assets/create-async-atom-flow.png)
+```mermaid
+graph TD;
+  START["createAsyncAtom(promise)"] --> CACHE{"WeakMap에<br>Promise 키 존재?"}
+  CACHE -- "예" --> RETURN["기존 Proxy Atom 반환"]
+  CACHE -- "아니오" --> NEW["Proxy Atom 생성"]
+  NEW --> STORE["WeakMap에 캐싱"]
+
+  subgraph Proxy_get_트랩
+    STORE --> ACCESS["get(atom)"]
+    ACCESS --> STATUS{"state.status"}
+    STATUS -- "PENDING" --> THROWP["throw promise"]
+    STATUS -- "ERROR" --> THROWE["throw error"]
+    STATUS -- "SUCCESS" --> RET["state.data 반환"]
+  end
+
+  subgraph 업데이트
+    SET["set(atom, value)"]
+    SET --> UPDATE["state.status = SUCCESS<br/>state.data = value"]
+    UPDATE --> RET
+  end
+
+  ACCESS -.-> GETASYNC["getAsync(atom)"]
+  GETASYNC --> AWAIT["await thrown promise"]
+  AWAIT --> RET
+```
 
 ## 7. API 설계 및 사용 패턴
 
@@ -102,8 +232,8 @@ return data;
 | `get(atom)`                   | 현재 값 조회          | 단순 액세스, 비동기 Atom은 Proxy가 처리 |
 | `set(atom, newValue)`         | 상태 갱신             | `Object.is` 비교 후 리스너 통지         |
 | `subscribe(atom, callback)`   | 변경 감시             | 즉시 호출 + 해지 시 Set 정리            |
-| `createDerivedAtom(callback)` | 파생 상태             | 의존성 자동 추적, 구독 체인 구성        |
-| `createAsyncAtom(promise)`    | 비동기 상태           | Suspense 대응, WeakMap 캐시             |
+| `createDerivedAtom(callback)` | 파생 상태             | 의존성 자동 추적, Suspense/에러 전파    |
+| `createAsyncAtom(promise)`    | 비동기 상태           | Promise 캐시, Suspense 대응             |
 | `getAsync(atom)`              | 비동기 값 추출        | throw된 Promise/에러를 await 처리       |
 
 ## 8. React 연동 설계 (`@sangtae-react`)
@@ -155,7 +285,7 @@ export function useAtom<T>(atom: Atom<T>) {
 }
 ```
 
-```vue
+```ts
 <script setup lang="ts">
 import { createAtom, set } from "sangtae-js";
 import { useAtom } from "./useAtom";
