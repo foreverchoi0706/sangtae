@@ -34,29 +34,127 @@ export const createAtom = <T>(initialValue: T): Atom<T> => {
 export const createDerivedAtom = <T>(
   callback: (get: <U>(atom: Atom<U>) => U) => T
 ): Atom<T> => {
-  const atoms = new Set<Atom<unknown>>();
-
-  const initialValue = callback((atom) => {
-    atoms.add(atom as Atom<unknown>);
-    return atom[VALUE];
-  });
   const derivedAtom: InternalAtom<T> = {
-    [VALUE]: initialValue,
+    [VALUE]: undefined as any,
     [LISTENERS]: null,
   };
-  // 아톰들을 구독하고 있는 아톰이 변경되면 파생 아톰의 값을 업데이트
-  atoms.forEach((atom) => {
-    subscribe(atom, () => {
-      const newValue = callback(get);
+
+  let status: "success" | "pending" | "error" = "pending";
+  let suspense: Promise<unknown> | null = null;
+  let error: unknown;
+
+  let trackedAtoms = new Set<Atom<unknown>>();
+  const subscriptions = new Map<Atom<unknown>, () => void>();
+
+  const evaluate = (options?: { suppressErrors?: boolean }) => {
+    const nextTrackedAtoms = new Set<Atom<unknown>>();
+
+    const getWithTracking = <U>(atom: Atom<U>): U => {
+      nextTrackedAtoms.add(atom as Atom<unknown>);
+      return get(atom);
+    };
+
+    const syncTrackedAtoms = () => {
+      trackedAtoms.forEach((atom) => {
+        if (!nextTrackedAtoms.has(atom)) {
+          const unsubscribe = subscriptions.get(atom);
+          if (unsubscribe) {
+            unsubscribe();
+            subscriptions.delete(atom);
+          }
+        }
+      });
+
+      nextTrackedAtoms.forEach((atom) => {
+        if (!subscriptions.has(atom)) {
+          const unsubscribe = subscribe(atom, () => {
+            evaluate({ suppressErrors: true });
+          });
+          subscriptions.set(atom, unsubscribe);
+        }
+      });
+
+      trackedAtoms = nextTrackedAtoms;
+    };
+
+    try {
+      const newValue = callback(getWithTracking);
+
+      status = "success";
+      suspense = null;
+      error = undefined;
+
+      syncTrackedAtoms();
+
       if (!Object.is(derivedAtom[VALUE], newValue)) {
         derivedAtom[VALUE] = newValue;
-
-        // 구독자들에게 알림
         derivedAtom[LISTENERS]?.forEach((listener) => listener(newValue));
       }
-    });
+    } catch (thrown) {
+      syncTrackedAtoms();
+
+      if (thrown instanceof Promise) {
+        status = "pending";
+        error = undefined;
+        suspense = thrown;
+
+        thrown
+          .then(() => {
+            if (suspense === thrown) {
+              evaluate({ suppressErrors: true });
+            }
+          })
+          .catch((err) => {
+            if (suspense === thrown) {
+              status = "error";
+              error = err;
+            }
+          });
+
+        return;
+      }
+
+      status = "error";
+      error = thrown;
+      suspense = null;
+
+      if (!options?.suppressErrors) {
+        throw thrown;
+      }
+    }
+  };
+
+  evaluate();
+
+  const proxyAtom = new Proxy(derivedAtom, {
+    get(target, property) {
+      if (property === VALUE) {
+        if (status === "pending" && suspense) {
+          throw suspense;
+        }
+        if (status === "error") {
+          throw error;
+        }
+      }
+      return Reflect.get(target, property);
+    },
+    set(target, property, value) {
+      if (property === VALUE) {
+        if (Object.is(target[VALUE], value)) {
+          return true;
+        }
+        target[VALUE] = value as T;
+        status = "success";
+        suspense = null;
+        error = undefined;
+        return true;
+      }
+
+      return Reflect.set(target, property, value);
+    },
   });
-  return derivedAtom;
+
+  return proxyAtom as Atom<T>;
 };
 
 // 비동기 atom 캐시 (같은 Promise에 대해 같은 Proxy atom 반환)
@@ -150,14 +248,14 @@ export const get = <T>(atom: Atom<T>): T => atom[VALUE];
 /**
  * @description (추가기능) 비동기 atom의 값을 반환합니다
  * @param {Atom<T>} atom atom 객체
- * @returns {Promise<T>} atom의 현재 상태 값을 담은 Promise 객체
+ * @returns {T} atom의 현재 상태 값을 담은 Promise 객체
  */
 export const getAsync = async <T>(atom: Atom<T>) => {
   try {
     return get(atom);
   } catch (thrown) {
     if (thrown instanceof Promise) {
-      return (await thrown) as Promise<T>;
+      return (await thrown) as T;
     }
     throw thrown;
   }
@@ -192,7 +290,6 @@ export const subscribe = <T>(atom: Atom<T>, callback: Listener<T>) => {
   }
 
   listeners.add(callback);
-  // callback(atom[VALUE]);
 
   return () => {
     // atom에서 현재 listeners를 가져와서 실제 상태 확인

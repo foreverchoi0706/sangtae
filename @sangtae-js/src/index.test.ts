@@ -329,6 +329,41 @@ describe("선택 기능 - 파생 Atom", () => {
       set(atomA, 15);
       expect(get(derived2)).toBe(70); // (15 + 20) * 2
     });
+
+    it("비동기 atom에 의존하는 파생 atom도 정상적으로 동작해야 함", async () => {
+      let resolvePromise: (value: number) => void;
+      const asyncSource = new Promise<number>((resolve) => {
+        resolvePromise = resolve;
+      });
+
+      const asyncAtom = createAsyncAtom(asyncSource);
+      const baseAtom = createAtom(1);
+
+      const derivedAtom = createDerivedAtom(
+        (get) => get(asyncAtom) + get(baseAtom)
+      );
+      const callback = vi.fn();
+
+      subscribe(derivedAtom, callback);
+
+      expect(() => get(derivedAtom)).toThrow();
+      expect(callback).not.toHaveBeenCalled();
+
+      resolvePromise!(41);
+      await asyncSource;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(get(derivedAtom)).toBe(42);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenLastCalledWith(42);
+
+      set(baseAtom, 2);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(get(derivedAtom)).toBe(43);
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenLastCalledWith(43);
+    });
   });
 });
 
