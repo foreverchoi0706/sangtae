@@ -1,13 +1,12 @@
 # 추가할 타입 목록 업데이트
+
 _Exported on 2025. 11. 10. at 22시 54분 26초 GMT+9 from Cursor (2.0.69)_
 
 ---
 
 **User**
 
-@README.md (121-133) 
-
-
+@README.md (121-133)
 
 이 부분에 다른 타입들도 다 추가해줘
 
@@ -15,7 +14,7 @@ _Exported on 2025. 11. 10. at 22시 54분 26초 GMT+9 from Cursor (2.0.69)_
 
 **Cursor**
 
-```markdown
+````markdown
 # sangtae-js
 
 Minimal Global State Management Library
@@ -37,6 +36,7 @@ Minimal Global State Management Library
 ```bash
 npm install sangtae-js
 ```
+````
 
 ## 빠른 시작
 
@@ -138,8 +138,6 @@ function Counter() {
 
 ## API 레퍼런스
 
-
-
 ### `Listener<T>`
 
 ```ts
@@ -162,7 +160,6 @@ type Atom<T> = Readonly<{
 - 외부에서는 `get`, `set`, `subscribe` 같은 함수를 통해서만 상태를 읽거나 변경할 수 있습니다.
 - `Atom<T>` 타입은 불변(readonly)으로 노출되어 직접 속성을 수정할 수 없으며, 순수한 데이터 컨테이너 역할만 담당합니다.
 
-
 | 함수                          | 설명                                                                                                    |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `createAtom(initialValue)`    | 초깃값으로 새로운 atom을 만듭니다.                                                                      |
@@ -172,7 +169,6 @@ type Atom<T> = Readonly<{
 | `set(atom, newValue)`         | atom 값을 새 값으로 갱신하고, 변경 시 구독자에게 통지합니다.                                            |
 | `subscribe(atom, listener)`   | 값이 바뀔 때마다 `listener`를 실행하고, 즉시 현재 값을 한 번 호출합니다. 반환값은 구독 해제 함수입니다. |
 
-
 ## 개발 스크립트
 
 - `npm run build`: 타입 검사 및 테스트 실행 후 `tsup`으로 번들을 생성합니다.
@@ -180,7 +176,7 @@ type Atom<T> = Readonly<{
 - `npm run test`: Vitest 워치 모드를 실행합니다.
 - `npm run test:run`: CI 등을 위한 Vitest 단발 실행을 수행합니다.
 
-```
+````
 
 - `@sangtae-js/README.md`에 `Atom<T>` 타입 정의랑 설명 추가했어, 내부 심볼과 접근 방법도 간단히 정리했어.
 - 테스트는 안 돌렸어.
@@ -218,7 +214,7 @@ Minimal Global State Management Library
 
 ```bash
 npm install sangtae-js
-```
+````
 
 ## 빠른 시작
 
@@ -401,7 +397,7 @@ type Atom<T> = Readonly<{
 - `npm run test`: Vitest 워치 모드를 실행합니다.
 - `npm run test:run`: CI 등을 위한 Vitest 단발 실행을 수행합니다.
 
-```
+````
 
 - `@sangtae-js/README.md`에 Vue 연동 섹션 추가해서 `useAtom` 컴포지션 예시랑 템플릿 샘플 넣어놨어.
 - 테스트는 따로 안 돌렸어.
@@ -457,7 +453,7 @@ type InternalAtom<T> = {
   [VALUE]: T;
   [LISTENERS]: Set<Listener<T>> | null;
 };
-```
+````
 
 ### 4.2 값 비교 최적화
 
@@ -609,7 +605,7 @@ const increment = () => set(counterAtom, count.value + 1);
 - 내부 상태를 완전히 은닉해 안정성을 높이고, 필요한 곳에만 구독이 걸리도록 만들어 성능과 사용성을 동시에 확보했습니다.
 - 향후 배치 업데이트 같은 고급 기능을 추가하더라도 현재 구조를 그대로 확장할 수 있도록 모듈 단위를 유지했습니다.
 
-```
+````
 
 - `DESIGN.md`에 Vue 연동 섹션 추가했고, Composition API용 `useAtom` 예시랑 컴포넌트 사용 예시 넣었어.
 - 새 섹션 추가하면서 뒤쪽 번호도 10~12로 하나씩 밀어놨어.
@@ -699,9 +695,9 @@ createAsyncAtom도 이미지 생성해서 첨부해줄래?
   <text class="note" x="730" y="260">WeakMap에 캐시</text>
 </svg>
 
-```
+````
 
-```markdown
+````markdown
 # DESIGN - sangtae 상태 관리 라이브러리
 
 ## 1. 프로젝트 개요
@@ -743,6 +739,7 @@ type InternalAtom<T> = {
   [LISTENERS]: Set<Listener<T>> | null;
 };
 ```
+````
 
 ### 4.2 값 비교 최적화
 
@@ -896,7 +893,7 @@ const increment = () => set(counterAtom, count.value + 1);
 - 내부 상태를 완전히 은닉해 안정성을 높이고, 필요한 곳에만 구독이 걸리도록 만들어 성능과 사용성을 동시에 확보했습니다.
 - 향후 배치 업데이트 같은 고급 기능을 추가하더라도 현재 구조를 그대로 확장할 수 있도록 모듈 단위를 유지했습니다.
 
-```
+````
 
 - `assets/create-async-atom-flow.svg` 만들어서 `createAsyncAtom` 흐름 다이어그램 추가했고, `DESIGN.md`의 비동기 Atom 섹션에 이미지를 삽입했어.
 - 테스트나 빌드는 안 돌렸어.
@@ -988,7 +985,7 @@ const increment = () => set(counterAtom, count.value + 1);
 </svg>
 
 
-```
+````
 
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" width="920" height="520" viewBox="0 0 920 520">
@@ -1074,7 +1071,7 @@ const increment = () => set(counterAtom, count.value + 1);
 
 **User**
 
-@DESIGN.md (1-193)  React와 연동할 때 발생했던 문제를 포함하여 구현중 발생했던 문제들과 이를 해결한 방법
+@DESIGN.md (1-193) React와 연동할 때 발생했던 문제를 포함하여 구현중 발생했던 문제들과 이를 해결한 방법
 
 추가해줘
 
@@ -1082,7 +1079,7 @@ const increment = () => set(counterAtom, count.value + 1);
 
 **Cursor**
 
-```markdown
+````markdown
 # DESIGN - sangtae 상태 관리 라이브러리
 
 ## 1. 프로젝트 개요
@@ -1124,6 +1121,7 @@ type InternalAtom<T> = {
   [LISTENERS]: Set<Listener<T>> | null;
 };
 ```
+````
 
 ### 4.2 값 비교 최적화
 
@@ -1289,7 +1287,7 @@ const increment = () => set(counterAtom, count.value + 1);
 - 내부 상태를 완전히 은닉해 안정성을 높이고, 필요한 곳에만 구독이 걸리도록 만들어 성능과 사용성을 동시에 확보했습니다.
 - 향후 배치 업데이트 같은 고급 기능을 추가하더라도 현재 구조를 그대로 확장할 수 있도록 모듈 단위를 유지했습니다.
 
-```
+````
 
 - `DESIGN.md`에 구현 중 겪었던 문제와 해결책 정리한 새 섹션(React 이슈 포함) 추가했고, 결론 섹션 번호를 13으로 밀었어.
 - 테스트나 빌드는 안 돌렸어.
@@ -1313,9 +1311,9 @@ const increment = () => set(counterAtom, count.value + 1);
 @@
  - 고급 기능을 추가하더라도 현재 구조를 그대로 확장할 수 있도록 모듈 단위를 유지했습니다.
 *** End Patch
-```
+````
 
-```markdown
+````markdown
 # DESIGN - 상태 관리 라이브러리 sangtae
 
 ## 1. 프로젝트 개요
@@ -1358,6 +1356,7 @@ type InternalAtom<T> = {
   [LISTENERS]: Set<Listener<T>> | null;
 };
 ```
+````
 
 ### 4.2 값 비교 최적화
 
@@ -1505,20 +1504,7 @@ const increment = () => set(counterAtom, count.value + 1);
 - **디버깅 도구**: Atom 생성 시 이름을 옵션으로 받아 개발자 도구나 로깅에 활용하려고 합니다.
 - **서버 컴포넌트 대응**: `createAsyncAtom`의 Suspense 대응을 기반으로 서버 액션과 결합하는 방식을 검토하고 있습니다.
 
-## 12. 구현 중 문제와 해결
-
-- **React 초기 렌더 불일치**  
-  외부 스토어를 `useEffect`로 구독하면 CSR과 SSR, Concurrent 렌더링 환경에서 첫 렌더 직후 값이 달라지는 문제가 발생했습니다. → `useSyncExternalStore`를 사용해 React가 권장하는 구독 패턴을 따르도록 수정했습니다.
-- **React 구독 콜백 재생성**  
-  Atom을 props로 받을 때 컴포넌트가 리렌더되면서 매번 새로운 구독 함수를 생성해 구독/해제가 반복되는 비효율이 있었습니다. → `useCallback`으로 구독자/스냅샷 함수를 Atom 의존성에 묶어 메모이제이션했습니다.
-- **파생 Atom 순환 참조 위험**  
-  파생 Atom을 정의하는 콜백이 동일 파생 Atom을 다시 읽으면 무한 루프가 생길 수 있었습니다. → 파생 Atom 생성 시 의존 Atom Set을 초기화 단계에서 한 번만 구축하고, 이후 재평가에서는 `get` 호출만 허용해 순환을 차단했습니다.
-- **비동기 Atom 중복 생성**  
-  동일한 Promise로 여러 번 `createAsyncAtom`을 호출하면 불필요한 Atom이 생기고 캐시가 깨지는 문제가 있었습니다. → Promise를 키로 하는 `WeakMap` 캐시를 도입해 동일 Promise에 대해 항상 같은 Proxy Atom을 반환하도록 했습니다.
-- **리스너 메모리 누수**  
-  구독자가 해지된 뒤에도 내부 `Set`이 남아 있어 장기 실행 환경에서 메모리 누수가 우려되었습니다. → 마지막 구독자가 해지되면 `Set`을 `null`로 되돌려 GC가 참조를 정리할 수 있게 했습니다.
-
-## 13. 결론
+## 12. 결론
 
 - 작은 API 표면으로도 파생/비동기/React 연동까지 커버하는 것을 목표로 설계했습니다.
 - 내부 상태를 완전히 은닉해 안정성을 높이고, 필요한 곳에만 구독이 걸리도록 만들어 성능과 사용성을 동시에 확보했습니다.
@@ -1526,6 +1512,7 @@ const increment = () => set(counterAtom, count.value + 1);
 
 ```
 
-- `DESIGN.md` 비동기 Atom 섹션에 선택 요구사항 외 추가 구현으로 `getAsync` 헬퍼를 넣은 이유랑 이점 적어줬어.  
+- `DESIGN.md` 비동기 Atom 섹션에 선택 요구사항 외 추가 구현으로 `getAsync` 헬퍼를 넣은 이유랑 이점 적어줬어.
 - 다른 수정, 테스트는 안 했어.
 
+```

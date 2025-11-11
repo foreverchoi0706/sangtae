@@ -118,9 +118,9 @@ if (currentListeners.size === 0) {
 
 - 초기 생성 시 `callback(get)`을 실행하면서 접근한 Atom을 추적 `Set`에 담고, 기존 구독과 비교하여 Map으로 관리합니다.
 - 각 의존 Atom을 `subscribe`하여 변경 시 `evaluate`를 재실행하고, 끊어진 의존성은 즉시 구독을 해제합니다.
-- 평가 중 Promise가 던져지면 상태를 `PENDING`으로 두고 같은 Promise가 해결될 때까지 Suspense 플로우를 유지합니다. 해결되면 자동으로 재평가하고, 에러면 상태를 `ERROR`로 저장합니다.
+- 평가 중 Promise가 던져지면 상태를 `PENDING`으로 두고 같은 Promise가 해결될 때까지 Suspense 플로우를 유지합니다. 해결되면 자동으로 재평가하고, Promise가 reject되면 `catch` 핸들러에서 상태를 `ERROR`로 저장하고 구독자에게 알림을 보냅니다.
 - Proxy가 `VALUE` 접근을 가로채서 `PENDING`이면 Promise, `ERROR`면 에러를 throw하여 React Suspense나 try/catch에서 그대로 활용할 수 있습니다.
-- 새 파생 값과 이전 값을 `Object.is`로 비교해 달라졌을 때만 리스너에게 알림을 보냅니다.
+- 새 파생 값과 이전 값을 `Object.is`로 비교해 달라졌을 때만 리스너에게 알림을 보냅니다. Promise나 에러 상태 변경 시에도 `emit` 함수를 통해 구독자에게 알림을 보냅니다.
 - 파생 Atom도 일반 Atom처럼 노출되므로 React/비 React 환경에서 동일 API를 사용할 수 있습니다.
 
 ```ts
@@ -145,13 +145,23 @@ const evaluate = (suppressErrors = false) => {
     if (thrown instanceof Promise) {
       state.status = ASYNC_ATOM_STATUS.PENDING;
       state.suspense = thrown;
-      thrown.then(() => {
-        if (state.suspense === thrown) evaluate(true);
-      });
+      emit();
+      thrown
+        .then(() => {
+          if (state.suspense === thrown) evaluate(true);
+        })
+        .catch((err) => {
+          if (state.suspense === thrown) {
+            state.status = ASYNC_ATOM_STATUS.ERROR;
+            state.error = err;
+            emit();
+          }
+        });
       return;
     }
     setStatus(ASYNC_ATOM_STATUS.ERROR);
     state.error = thrown;
+    emit();
     if (!suppressErrors) throw thrown;
   }
 };
@@ -175,11 +185,11 @@ sequenceDiagram
     D->>L: notify(next) (값 변경 시)
   else Promise 던짐
     C-->>D: throw promise
-    D->>D: status = PENDING<br/>state.suspense = promise
-    note right of D: promise 해결 시 evaluate(true)
+    D->>D: status = PENDING<br/>state.suspense = promise<br/>emit()
+    note right of D: promise.then() → evaluate(true)<br/>promise.catch() → status=ERROR, emit()
   else 오류 발생
     C-->>D: throw error
-    D->>D: setStatus(ERROR)<br/>state.error = error
+    D->>D: setStatus(ERROR)<br/>state.error = error<br/>emit()
   end
 ```
 
@@ -226,20 +236,20 @@ graph TD;
 
 ## 7. API 설계 및 사용 패턴
 
-| 함수                          | 목적                  | 주요 설계 포인트                        |
-| ----------------------------- | --------------------- | --------------------------------------- |
-| `createAtom(initialValue)`    | 새로운 상태 단위 생성 | Symbol 키 기반 은닉, 초기엔 리스너 없음 |
-| `get(atom)`                   | 현재 값 조회          | 단순 액세스, 비동기 Atom은 Proxy가 처리 |
-| `set(atom, newValue)`         | 상태 갱신             | `Object.is` 비교 후 리스너 통지         |
-| `subscribe(atom, callback)`   | 변경 감시             | 즉시 호출 + 해지 시 Set 정리            |
-| `createDerivedAtom(callback)` | 파생 상태             | 의존성 자동 추적, Suspense/에러 전파    |
-| `createAsyncAtom(promise)`    | 비동기 상태           | Promise 캐시, Suspense 대응             |
-| `getAsync(atom)`              | 비동기 값 추출        | throw된 Promise/에러를 await 처리       |
+| 함수                          | 목적                  | 주요 설계 포인트                          |
+| ----------------------------- | --------------------- | ----------------------------------------- |
+| `createAtom(initialValue)`    | 새로운 상태 단위 생성 | Symbol 키 기반 은닉, 초기엔 리스너 없음   |
+| `get(atom)`                   | 현재 값 조회          | 단순 액세스, 비동기 Atom은 Proxy가 처리   |
+| `set(atom, newValue)`         | 상태 갱신             | `Object.is` 비교 후 리스너 통지           |
+| `subscribe(atom, callback)`   | 변경 감시             | 등록 시 즉시 호출 안 함, 해지 시 Set 정리 |
+| `createDerivedAtom(callback)` | 파생 상태             | 의존성 자동 추적, Suspense/에러 전파      |
+| `createAsyncAtom(promise)`    | 비동기 상태           | Promise 캐시, Suspense 대응               |
+| `getAsync(atom)`              | 비동기 값 추출        | throw된 Promise/에러를 await 처리         |
 
 ## 8. React 연동 설계 (`@sangtae-react`)
 
 - `useAtom`은 `useSyncExternalStore`를 사용하여 구독과 스냅샷을 안정적으로 관리합니다.
-- 스토어 변경 알림은 `subscribe`가 제공하는 즉시 호출 덕분에 첫 렌더에서 값이 맞춰집니다.
+- `useSyncExternalStore`가 초기 렌더 시 `getSnapshot`을 즉시 호출하여 현재 Atom 값을 가져오므로 첫 렌더에서 값이 맞춰집니다.
 - setter는 단순히 `set`을 감싼 콜백으로, 클로저 문제 없이 최신 Atom에 바인딩됩니다.
 
 ```1:20:@sangtae-react/src/index.ts
@@ -256,44 +266,83 @@ return [value, setValue];
 - **문제 3: createAsyncAtom 사용 한계**  
   비동기 아톰을 만드는것까지는 좋았으나 바닐라 환경에서 사용할 시 불편한 템플릿 코드가 반복되는 이슈가있었습니다. 설계의 한계라고 판단되어 getAsync 를 추가하여 사용성을 증대하였습니다.
 
-## 9. Vue 연동 설계
+## 9. Vue 연동 설계 (`@sangtae-vue`)
 
 - Composition API 기준 `useAtom` 헬퍼를 제공하면 Vue에서도 동일한 Atom을 재사용할 수 있습니다.
 - React에서와 동일하게 `subscribe` 기반으로 상태를 동기화하되, Vue는 반응형 ref를 사용해 템플릿에 노출합니다.
-- 라이프사이클 훅(`onMounted`, `onBeforeUnmount`)으로 구독 수명주기를 관리해 메모리 누수를 예방합니다.
+- React와 동일한 API로 `[value, setValue]` 튜플을 반환하여 사용 패턴을 일관되게 유지합니다.
+- Suspense 처리를 위해 `get` 호출 시 Promise가 throw될 수 있으므로 try-catch로 감싸고, Promise가 해결되면 구독을 시작합니다.
+- 라이프사이클 훅(`onUnmounted`)으로 구독 해제를 관리해 메모리 누수를 예방합니다.
 
-```ts
-// @sangtae-js 예시 - Vue용 useAtom
-import { shallowRef, onMounted, onBeforeUnmount } from "vue";
-import { Atom, get, subscribe } from "sangtae-js";
+```1:57:@sangtae-vue/src/index.ts
+import { ref, onUnmounted } from "vue";
+import { get, set, subscribe, type Atom } from "sangtae-js";
 
-export function useAtom<T>(atom: Atom<T>) {
-  const value = shallowRef(get(atom));
+/**
+ * Atom의 현재값과 값을 변경할 수 있는 함수를 반환합니다.
+ * @param {Atom<T>} atom Atom
+ * @returns {[T, (newValue: T) => void]} Atom의 현재 값, Atom의 값을 변경할 수 있는 함수
+ */
+const useAtom = <T>(atom: Atom<T>) => {
+  let initialValue: T;
+
+  try {
+    initialValue = get(atom);
+  } catch (promise) {
+    if (promise instanceof Promise) {
+      initialValue = undefined as unknown as T;
+    } else {
+      throw promise;
+    }
+  }
+
   let unsubscribe: (() => void) | undefined;
 
-  onMounted(() => {
-    unsubscribe = subscribe(atom, (next) => {
-      value.value = next;
-    });
-  });
+  const value = ref<T>(initialValue);
 
-  onBeforeUnmount(() => {
+  const updateValue = () => {
+    try {
+      value.value = get(atom);
+    } catch (promise) {
+      if (!(promise instanceof Promise)) {
+        throw promise;
+      }
+    }
+  };
+
+  try {
+    unsubscribe = subscribe(atom, updateValue);
+  } catch (promise) {
+    if (promise instanceof Promise) {
+      promise.then(() => {
+        unsubscribe = subscribe(atom, updateValue);
+      });
+    } else {
+      throw promise;
+    }
+  }
+
+  onUnmounted(() => {
     unsubscribe?.();
   });
 
-  return value;
-}
+  const setValue = (newValue: T) => {
+    set(atom, newValue);
+  };
+
+  return [value, setValue] as const;
+};
 ```
 
 ```ts
 <script setup lang="ts">
-import { createAtom, set } from "sangtae-js";
-import { useAtom } from "./useAtom";
+import { createAtom } from "sangtae-js";
+import { useAtom } from "@sangtae-vue";
 
 const counterAtom = createAtom(0);
-const count = useAtom(counterAtom);
+const [count, setCount] = useAtom(counterAtom);
 
-const increment = () => set(counterAtom, count.value + 1);
+const increment = () => setCount(count.value + 1);
 </script>
 
 <template>
@@ -301,8 +350,9 @@ const increment = () => set(counterAtom, count.value + 1);
 </template>
 ```
 
-- Vue 3의 `shallowRef`를 사용하면 Atom 값 변경 시 필요한 최소한의 반응성만 유지할 수 있습니다.
+- Vue 3의 `ref`를 사용하여 Atom 값 변경 시 반응성을 유지합니다.
 - 동일 Atom을 React/Vue 양쪽에서 공유할 수 있어 프레임워크 혼합 환경에서도 일관된 상태 관리가 가능합니다.
+- Suspense를 지원하는 비동기 Atom도 try-catch와 Promise 처리로 안전하게 사용할 수 있습니다.
 
 ## 10. 성능 및 최적화 포인트
 
@@ -310,19 +360,3 @@ const increment = () => set(counterAtom, count.value + 1);
 - 구독자 관리에 `Set`을 사용해 추가/삭제가 O(1)이고, 중복 등록도 예방했습니다.
 - 비동기 Atom Proxy는 `get` 접근만 가로채서 다른 연산에는 비용이 들지 않도록 설계했습니다.
 - 파생 Atom은 의존성을 `Set`으로 추적해 중복 구독을 방지하고, 의존 Atom 수가 많아도 선형 비용을 유지합니다.
-
-## 11. 확장 가능성과 로드맵
-
-- **디버깅 도구**: Atom 생성 시 이름을 옵션으로 받아 개발자 도구나 로깅에 활용하려고 합니다.
-- **서버 컴포넌트 대응**: `createAsyncAtom`의 Suspense 대응을 기반으로 서버 액션과 결합하는 방식을 검토하고 있습니다.
-
-## 12. 구현 중 문제와 해결
-
-- **React 구독 콜백 재생성**  
-  Atom을 props로 받을 때 컴포넌트가 리렌더되면서 매번 새로운 구독 함수를 생성해 구독/해제가 반복되는 비효율이 있었습니다. → `useCallback`으로 구독자/스냅샷 함수를 Atom 의존성에 묶어 메모이제이션했습니다.
-- **파생 Atom 순환 참조 위험**  
-  파생 Atom을 정의하는 콜백이 동일 파생 Atom을 다시 읽으면 무한 루프가 생길 수 있었습니다. → 파생 Atom 생성 시 의존 Atom Set을 초기화 단계에서 한 번만 구축하고, 이후 재평가에서는 `get` 호출만 허용해 순환을 차단했습니다.
-- **비동기 Atom 중복 생성**  
-  동일한 Promise로 여러 번 `createAsyncAtom`을 호출하면 불필요한 Atom이 생기고 캐시가 깨지는 문제가 있었습니다. → Promise를 키로 하는 `WeakMap` 캐시를 도입해 동일 Promise에 대해 항상 같은 Proxy Atom을 반환하도록 했습니다.
-- **리스너 메모리 누수**  
-  구독자가 해지된 뒤에도 내부 `Set`이 남아 있어 장기 실행 환경에서 메모리 누수가 우려되었습니다. → 마지막 구독자가 해지되면 `Set`을 `null`로 되돌려 GC가 참조를 정리할 수 있게 했습니다.
