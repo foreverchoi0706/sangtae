@@ -86,6 +86,8 @@
 
 ### 3.2 설치 및 실행 방법
 
+- 아래 명령어는 루트의 <a href="./package.json">pakage.json</a> 실행가능합니다
+
 1. **프로젝트 워크스페이스 의존성 설치**
    ```bash
    npm run install:all
