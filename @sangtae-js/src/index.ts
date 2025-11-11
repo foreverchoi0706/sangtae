@@ -2,14 +2,14 @@
 const VALUE = Symbol("ATOM_VALUE");
 const LISTENERS = Symbol("ATOM_LISTENERS");
 
+/** 구독 리스너*/
+export type Listener<T> = (value: T) => void;
+
 /** 내부 아톰 타입 */
 type InternalAtom<T> = {
   [VALUE]: T;
   [LISTENERS]: Set<Listener<T>> | null;
 };
-
-/** 구독 리스너*/
-export type Listener<T> = (value: T) => void;
 
 /** atom 타입 */
 export type Atom<T> = Readonly<InternalAtom<T>>;
@@ -204,7 +204,7 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
     [LISTENERS]: null,
   };
 
-  // Promise 완료 처리
+  // Promise 처리
   promise.then(
     (value) => {
       // atom 값 업데이트 후   // 구독자들에게 알림

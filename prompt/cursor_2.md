@@ -1,6 +1,6 @@
 # 최적화 가능성 검토하기
 
-_Exported on 2025. 11. 8. at 16시 41분 0초 GMT+9 from Cursor (2.0.63)_
+_Exported on 2025. 11. 8. at 20시 12분 0초 GMT+9 from Cursor (2.0.63)_
 
 ---
 

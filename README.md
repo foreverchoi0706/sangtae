@@ -80,7 +80,7 @@
 ├── <a href="./README.md">README.md</a>        # 프로젝트 설명 파일
 ├── <a href="./DESIGN.md">DESIGN.md</a>        # 프로젝트 설계 파일
 ├── <a href="./agent-config.yaml">agent-config.yaml</a>        # 에이전트 설정 및 과제 시 가이드라인 파일
-└── prompt      #ai 협업 프롬프트 파일
+└── prompt      #ai 협업 프롬프트 폴더
 </pre>
 
 ### 3.2 설치 및 실행 방법
