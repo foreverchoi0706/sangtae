@@ -615,6 +615,84 @@ const CounterHistoryCard = () => {
 };
 
 /**
+ * @description 배치 업데이트 테스트 데모 컴포넌트
+ */
+const BatchUpdateDemoCard = () => {
+  const renderCount = useRenderCount();
+  const [counter] = useAtom($counter);
+  const [step] = useAtom($step);
+  const [nickname] = useAtom($nickname);
+
+  // 이벤트 핸들러 내에서는 React 18이 자동으로 배칭함
+  const handleSyncBatch = () => {
+    set($counter, counter + 1);
+    set($step, step + 1);
+    set($nickname, `업데이트 ${counter + 1}`);
+    // React 18에서는 이 세 업데이트가 자동으로 배치되어 한 번의 렌더링만 발생
+  };
+
+  // Promise나 setTimeout 내부에서도 React 18은 자동 배칭함
+  const handleAsyncBatch = () => {
+    setTimeout(() => {
+      set($counter, counter + 10);
+      set($step, step + 10);
+      set($nickname, `비동기 업데이트 ${counter + 10}`);
+      // React 18에서는 자동 배칭되어 한 번의 렌더링만 발생
+    }, 100);
+  };
+
+  // 여러 atom을 동시에 업데이트 (React 18 자동 배칭)
+  const handleMultipleUpdates = () => {
+    set($counter, counter + 100);
+    set($step, step + 100);
+    set($nickname, `다중 업데이트 ${counter + 100}`);
+    // React 18에서는 자동 배칭되어 한 번의 렌더링만 발생
+  };
+
+  // 배치 없이 개별 업데이트 (비교용)
+  const handleIndividualUpdates = () => {
+    // 각 업데이트가 개별적으로 처리되지만, React 18의 자동 배칭으로 인해
+    // 여전히 한 번의 렌더링만 발생할 수 있음
+    set($counter, counter + 1);
+    setTimeout(() => set($step, step + 1), 0);
+    setTimeout(() => set($nickname, `개별 업데이트 ${counter + 1}`), 0);
+  };
+
+  return (
+    <article className="atom-card atom-card--wide">
+      <header className="atom-card__header">
+        <h3>React 18 배치 업데이트 테스트</h3>
+        <span className="render-badge">렌더링 {renderCount}회</span>
+      </header>
+      <div className="atom-card__value atom-card__value--small">
+        <p>
+          카운터: <strong>{counter}</strong>
+        </p>
+        <p>
+          스텝: <strong>{step}</strong>
+        </p>
+        <p>
+          닉네임: <strong>{nickname || "(없음)"}</strong>
+        </p>
+      </div>
+      <div className="atom-card__actions">
+        <button onClick={handleSyncBatch}>동기 배치 업데이트</button>
+        <button onClick={handleAsyncBatch}>비동기 배치 업데이트</button>
+        <button onClick={handleMultipleUpdates}>다중 업데이트</button>
+        <button onClick={handleIndividualUpdates}>
+          강제 개별 업데이트 (비교용)
+        </button>
+      </div>
+      <p className="atom-card__hint">
+        React 18에서는 이벤트 핸들러, Promise, setTimeout 등에서 여러 상태
+        업데이트가 자동으로 배치되어 한 번의 렌더링만 발생합니다. 렌더링 횟수를
+        확인하여 배치 업데이트가 제대로 작동하는지 테스트할 수 있습니다.
+      </p>
+    </article>
+  );
+};
+
+/**
  * @description 데모 페이지 컴포넌트
  */
 const DemoPage = () => {
@@ -638,6 +716,17 @@ const DemoPage = () => {
         </div>
       </section>
       <AsyncAtomsSection />
+      <section className="demo-section">
+        <header className="demo-section__header">
+          <h2>React 18 배치 업데이트 테스트</h2>
+          <p>
+            React 18의 자동 배칭 기능이 `useSyncExternalStore` 기반의
+            `useAtom`과 잘 작동하는지 확인할 수 있습니다. 여러 atom을 동시에
+            업데이트해도 한 번의 렌더링만 발생합니다.
+          </p>
+        </header>
+        <BatchUpdateDemoCard />
+      </section>
       <section className="demo-section">
         <header className="demo-section__header">
           <h2>구독자 동작 확인</h2>

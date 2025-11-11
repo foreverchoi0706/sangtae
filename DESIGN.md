@@ -4,25 +4,25 @@
 
 - `sangtae-js`는 최소한의 API로 전역 상태, 파생 상태, 비동기 상태를 다룰 수 있는 경량 상태 관리 라이브러리입니다.
 - `React`, `Vue` 등 framework 환경에서도 해당 API와 연동하여 동작합니다. `@sangtae-react`, `@sangtae-vue` 은 각 환경에서의 래핑 훅입니다.
-- 모든 상태는 `Atom` 단위로 격리되고, React 의존 없이도 `get`, `set`, `subscribe`만으로 동작하도록 설계했습니다.
+- 모든 상태는 `Atom` 단위로 격리되고, framework 의존 없이도 `get`, `set`, `subscribe`만으로 동작하도록 설계했습니다.
 - 선택 요구사항 중 파생 Atom, 비동기 Atom, GC 친화적인 구독 해제, 프레임워크 비종속 사용을 충족했습니다.
 
 ## 2. 제공 기능 요약
 
-| 영역          | 구현 현황 | 비고                                     |
-| ------------- | --------- | ---------------------------------------- |
-| Atom 기본 API | ✅        | `createAtom`, `get`, `set`, `subscribe`  |
-| 파생 Atom     | ✅        | `createDerivedAtom`으로 자동 의존성 추적 |
-| 비동기 Atom   | ✅        | `createAsyncAtom` + Suspense 대응        |
-| React 연동    | ✅        | `useAtom` (useSyncExternalStore 기반)    |
-| 메모리 관리   | ✅        | 마지막 구독 해지 시 Set 해제             |
-| 배치 업데이트 | ✅        | React API 와 연동하여 구현               |
+| 영역                 | 구현 현황 | 비고                                     |
+| -------------------- | --------- | ---------------------------------------- |
+| Atom 기본 API        | ✅        | `createAtom`, `get`, `set`, `subscribe`  |
+| 파생 Atom            | ✅        | `createDerivedAtom`으로 자동 의존성 추적 |
+| 비동기 Atom          | ✅        | `createAsyncAtom` + Suspense 대응        |
+| React 연동           | ✅        | `useAtom` (useSyncExternalStore 기반)    |
+| 메모리 관리          | ✅        | 마지막 구독 해지 시 Set 해제             |
+| 배치 업데이트(React) | ✅        | React API 와 연동하여 구현               |
 
 ## 3. 시스템 구조 개요
 
 - Atom은 내부적으로 값과 리스너 Set을 고유 Symbol 키로 숨기고 있습니다.
 - 파생 Atom은 `callback(get)` 패턴으로 접근한 Atom을 추적하고 Map 기반으로 구독을 관리합니다. 평가 중 Promise를 던지면 Suspense 플로우를 유지하면서 상태를 `PENDING`으로 표시합니다.
-- 비동기 Atom은 Promise 상태를 Proxy로 감싸 Suspense 패턴과 호환되도록 구성했으며, 동일 Promise에 대해 캐싱합니다.
+- 비동기를 담은 Atom은 Promise 상태를 Proxy로 감싸 Suspense 패턴과 호환되도록 구성했으며, 동일 Promise에 대해 캐싱합니다.
 - React 훅은 최소 의존으로 `useSyncExternalStore`를 통해 구독과 구독 해제, 배치 업데이트를 구현하였습니다.
 
 ```mermaid
@@ -249,12 +249,12 @@ return [value, setValue];
 
 ### React 연동 시 직면했던 문제와 해결
 
-- **문제 1: `useEffect` 기반 구독에서 초기 렌더 불일치**  
-  SSR이나 Concurrent 렌더링에서 첫 렌더 직후 값이 달라지는 플리커가 발생했습니다. → `useSyncExternalStore`로 변경하여 React가 권장하는 외부 스토어 패턴을 따랐습니다.
-- **문제 2: 메모이제이션 누락으로 구독 콜백 교체**  
+- **문제 1: 메모이제이션 누락으로 구독 콜백 교체**  
   Atom을 props로 받는 컴포넌트에서 리렌더 시마다 구독 함수를 새로 만들어 구독/해제가 반복되었습니다. → `useCallback`으로 구독/스냅샷 함수를 Atom 의존성에 묶어 안정화했습니다.
-- **문제 3: 파생 Atom 업데이트 루프**  
+- **문제 2: 파생 Atom 업데이트 루프**  
   파생 Atom이 자신을 의존 Atom으로 다시 참조하여 무한 루프가 생길 가능성이 있었습니다. → 파생 Atom 생성 시 의존 Atom Set을 고정하고, 재평가 시에는 `get`만 호출하도록 순환을 차단했습니다.
+- **문제 3: createAsyncAtom 사용 한계**  
+  비동기 아톰을 만드는것까지는 좋았으나 바닐라 환경에서 사용할 시 불편한 템플릿 코드가 반복되는 이슈가있었습니다. 설계의 한계라고 판단되어 getAsync 를 추가하여 사용성을 증대하였습니다.
 
 ## 9. Vue 연동 설계
 

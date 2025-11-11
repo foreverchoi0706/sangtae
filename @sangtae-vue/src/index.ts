@@ -1,6 +1,11 @@
 import { ref, onUnmounted } from "vue";
 import { get, set, subscribe, type Atom } from "sangtae-js";
 
+/**
+ * Atom의 현재값과 값을 변경할 수 있는 함수를 반환합니다.
+ * @param {Atom<T>} atom Atom
+ * @returns {[T, (newValue: T) => void]} Atom의 현재 값, Atom의 값을 변경할 수 있는 함수
+ */
 const useAtom = <T>(atom: Atom<T>) => {
   let initialValue: T;
 

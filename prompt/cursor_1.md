@@ -14,7 +14,7 @@ _Exported on 2025. 11. 8. at 16시 12분 5초 GMT+9 from Cursor (2.0.69)_
 
 **Cursor**
 
-어 알았어. InternalAtom이랑 createAtom 먼저 박아볼게. 잠깐만.
+어 알았어. InternalAtom이랑 createAtom 먼저 생성할게. 잠깐만
 
 ```typescript
 // 내부 저장소 키
@@ -38,13 +38,13 @@ export const createAtom = <T>(initialValue: T): Atom<T> => ({
 
 **User**
 
-LISTENERS 기본값 null이어야 GC 잘 된다고 했잖아. 그리고 Listener 타입 따로 빼줘.
+LISTENERS 기본값 null로 바꿔줘
 
 ---
 
 **Cursor**
 
-아 맞다. Set 바로 만들면 마지막 구독자 없어도 비우는 로직이 곤란하지. 수정할게.
+아 맞다. Set 바로 만들면 구독자가 없어도 생성되지
 
 ```typescript
 /** 구독 리스너 */
@@ -501,7 +501,7 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
 /**
  * @description atom의 현재 상태 값을 반환합니다
  * @param {Atom<T>} atom atom 객체
- * @returns {T} atom의 वर्तमान 상태 값
+ * @returns {T} atom의 상태 값
  */
 export const get = <T>(atom: Atom<T>): T => atom[VALUE];
 
