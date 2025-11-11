@@ -8,7 +8,7 @@ type InternalAtom<T> = {
   [LISTENERS]: Set<Listener<T>> | null;
 };
 
-// async atom의 현재 상태·대기중인 Promise·에러 정보를 모아둔 객체
+// async atom의 현재 상태 정보를 모아둔 객체
 enum ASYNC_ATOM_STATUS {
   SUCCESS = "SUCCESS",
   PENDING = "PENDING",
@@ -84,7 +84,11 @@ export const createDerivedAtom = <T>(
     [LISTENERS]: null,
   };
 
-  // 파생 atom 재평가 로직: 의존성 추적 → 값 계산 → 상태 업데이트
+  // 파생 atom 값이 변경될 때 구독자들에게 알림
+  const emit = () =>
+    derivedAtom[LISTENERS]?.forEach((listener) => listener(derivedAtom[VALUE]));
+
+  // 파생 atom 재평가 로직: 의존성 추적 > 값 계산 > 상태 업데이트 > 구독자에게 알림
   const evaluate = (suppressErrors = false) => {
     const nextTrackedAtoms = new Set<Atom<unknown>>();
 
@@ -110,6 +114,7 @@ export const createDerivedAtom = <T>(
         state.status = ASYNC_ATOM_STATUS.PENDING;
         state.error = undefined;
         state.suspense = thrown;
+        emit();
         thrown
           .then(() => {
             if (state.suspense === thrown) {
@@ -120,6 +125,7 @@ export const createDerivedAtom = <T>(
             if (state.suspense === thrown) {
               state.status = ASYNC_ATOM_STATUS.ERROR;
               state.error = err;
+              emit();
             }
           });
         return;
@@ -127,6 +133,7 @@ export const createDerivedAtom = <T>(
 
       setStatus(ASYNC_ATOM_STATUS.ERROR);
       state.error = thrown;
+      emit();
 
       if (!suppressErrors) throw thrown;
     }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { createAsyncAtom } from "sangtae-js";
+import { type Atom } from "sangtae-js";
 import { useAtom } from "sangtae-vue";
 import RenderBadge from "@/components/RenderBadge.vue";
 
@@ -12,6 +12,7 @@ interface RemoteTodo {
 }
 
 const props = defineProps<{
+  atom: Atom<RemoteTodo[]>;
   version: number;
 }>();
 
@@ -19,52 +20,7 @@ const emit = defineEmits<{
   (event: "refresh"): void;
 }>();
 
-const REMOTE_TODO_TEMPLATES: Array<Pick<RemoteTodo, "title" | "description">> =
-  [
-    {
-      title: "API 문서 검토",
-      description: "README 요약을 확인하고 팀 공유 준비",
-    },
-    {
-      title: "디자인 동기화",
-      description: "UI 컴포넌트 상태와 실제 데이터를 비교",
-    },
-    {
-      title: "렌더 카운트 점검",
-      description: "변경된 atom이 컴포넌트에 미치는 영향 확인",
-    },
-    {
-      title: "배포 체크리스트",
-      description: "build, lint, 테스트 명령어가 모두 통과하는지 확인",
-    },
-  ];
-
-const loadRemoteTodos = (version: number): Promise<RemoteTodo[]> =>
-  new Promise((resolve) => {
-    const delay = 600 + ((version % 3) + 1) * 200;
-    const startedAt = Date.now();
-
-    setTimeout(() => {
-      const now = new Date();
-      const generated = REMOTE_TODO_TEMPLATES.map((template, index) => ({
-        id: version * 10 + index + 1,
-        title: `${template.title} #${version + 1}`,
-        description: `${template.description} - ${now.toLocaleTimeString()}`,
-        completed: (version + index) % 2 === 0,
-      }));
-
-      const elapsed = Date.now() - startedAt;
-      resolve(
-        generated.map((todo) => ({
-          ...todo,
-          description: `${todo.description} (응답 ${elapsed}ms)`,
-        }))
-      );
-    }, delay);
-  });
-
-const remoteAtom = createAsyncAtom(loadRemoteTodos(props.version));
-const [todos, setTodos] = useAtom(remoteAtom);
+const [todos, setTodos] = useAtom(props.atom);
 
 const isLoading = computed(() => !Array.isArray(todos.value));
 

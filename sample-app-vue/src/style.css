@@ -336,6 +336,133 @@ main {
   justify-content: flex-end;
 }
 
+.async-card__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #312e81;
+  font-size: 0.9rem;
+}
+
+.async-card__summary strong {
+  font-size: 1rem;
+}
+
+.async-card__summary em {
+  font-style: normal;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.async-card__summary--success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.team-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.team-list__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.team-list__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.team-list__meta span {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.team-list__meta small {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.team-list__status {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.team-list__status--positive {
+  background: #dcfce7;
+  color: #047857;
+}
+
+.team-list__status--warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.team-list__status--danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.team-list__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.team-list__control-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.team-list__btn,
+.team-list__preset {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: none;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.team-list__btn:hover,
+.team-list__preset:hover {
+  background: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+.team-list__preset--active {
+  background: #6366f1;
+  color: #f9fafb;
+}
+
+.team-list__hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 .history-list {
   margin: 0;
   padding-left: 1rem;

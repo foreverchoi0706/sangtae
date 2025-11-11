@@ -1,15 +1,14 @@
 # Enhance sample app with new features
+
 _Exported on 2025. 11. 9. at 20시 11분 50초 GMT+9 from Cursor (2.0.69)_
 
 ---
 
 **User**
 
-@sample-app-react 예제를 
+@sample-app-react 예제를
 
-
-
-@JF002 - Minimal Global State Managment Library 구현.md (1-97)  에 서 요구하는 사항을 쉽게 시연할수 있는 기능들을 추가,수정해줘
+@JF002 - Minimal Global State Managment Library 구현.md (1-97) 에 서 요구하는 사항을 쉽게 시연할수 있는 기능들을 추가,수정해줘
 
 ---
 
@@ -29,10 +28,10 @@ export interface CounterSummary {
   greeting: string;
 }
 
-export const $summary = createDerivedAtom<CounterSummary>((read) => {
-  const counter = read($counter);
-  const step = read($step);
-  const nickname = read($nickname).trim();
+export const $summary = createDerivedAtom<CounterSummary>((get) => {
+  const counter = get($counter);
+  const step = get($step);
+  const nickname = get($nickname).trim();
 
   return {
     counter,
@@ -45,12 +44,10 @@ export const $summary = createDerivedAtom<CounterSummary>((read) => {
 });
 
 export const $doubleCounter = createDerivedAtom<number>(
-  (read) => read($counter) * 2
+  (get) => get($counter) * 2
 );
 
 export const $counterHistory = createAtom<string[]>([]);
-
-
 ```
 
 ```typescript
@@ -63,8 +60,6 @@ const useRenderCount = () => {
 };
 
 export default useRenderCount;
-
-
 ```
 
 ```typescriptreact
@@ -741,7 +736,7 @@ export default PostDetailPage;
 +
 +const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 +  `header-nav__link${isActive ? " header-nav__link--active" : ""}`;
- 
+
  const App = () => {
    return (
      <main>
@@ -787,7 +782,7 @@ export default PostDetailPage;
      </main>
    );
  };
- 
+
  export default App;
 *** End Patch
 ```
@@ -1257,10 +1252,10 @@ export interface CounterSummary {
   greeting: string;
 }
 
-export const $summary = createDerivedAtom<CounterSummary>((read) => {
-  const counter = read($counter);
-  const step = read($step);
-  const nickname = read($nickname).trim();
+export const $summary = createDerivedAtom<CounterSummary>((get) => {
+  const counter = get($counter);
+  const step = get($step);
+  const nickname = get($nickname).trim();
 
   return {
     counter,
@@ -1277,8 +1272,6 @@ export const $doubleCounter = createDerivedAtom<number>(
 );
 
 export const $counterHistory = createAtom<string[]>([]);
-
-
 ```
 
 ```typescript
@@ -1291,8 +1284,6 @@ const useRenderCount = () => {
 };
 
 export default useRenderCount;
-
-
 ```
 
 ```typescriptreact
@@ -2319,10 +2310,9 @@ main {
     max-height: 320px;
   }
 }
-
 ```
 
-```markdown
+````markdown
 # Minimal Global State Sample App
 
 이 프로젝트는 `sangtae-js` Minimal Global State 라이브러리의 필수 기능을 한눈에 시연할 수 있도록 구성된 React + Vite 예제 앱이다. 데모 페이지에서는 `createAtom`, `set`, `get`, `subscribe`, `useAtom`, `createDerivedAtom` 등의 핵심 API를 인터랙티브하게 체험할 수 있고, 포스트 페이지에서는 `createAsyncAtom`과 `Suspense`를 활용한 비동기 데이터 흐름을 확인할 수 있다.
@@ -2333,6 +2323,7 @@ main {
 npm install
 npm run dev
 ```
+````
 
 이후 브라우저에서 `http://localhost:5173`에 접속하면 된다.
 
@@ -2365,7 +2356,7 @@ npm run dev
 - 수동 구독 카드에서 구독을 해제하면 리스트가 초기화되며, 다시 구독을 누르면 `subscribe` 등록 시 바로 현재 값이 한 번 실행된다는 것을 확인할 수 있다.
 - README와 함께 `Design.md`(별도 문서)를 참고하면 라이브러리 설계 의도와 API 사용 패턴을 더 쉽게 설명할 수 있다.
 
-```
+````
 
 ---
 
@@ -2406,9 +2397,9 @@ export default App;
 
 
 
-```
+````
 
-```markdown
+````markdown
 # Minimal Global State Sample App
 
 이 프로젝트는 `sangtae-js` Minimal Global State 라이브러리의 필수 기능을 한눈에 시연할 수 있도록 구성된 React + Vite 예제 앱이다. 단일 데모 페이지에서 `createAtom`, `set`, `get`, `subscribe`, `useAtom`, `createDerivedAtom` 등의 핵심 API를 인터랙티브하게 체험할 수 있다.
@@ -2419,6 +2410,7 @@ export default App;
 npm install
 npm run dev
 ```
+````
 
 이후 브라우저에서 `http://localhost:5173`에 접속하면 된다.
 
@@ -2445,7 +2437,7 @@ npm run dev
 - 수동 구독 카드에서 구독을 해제하면 리스트가 초기화되며, 다시 구독을 누르면 `subscribe` 등록 시 바로 현재 값이 한 번 실행된다는 것을 확인할 수 있다.
 - README와 함께 `Design.md`(별도 문서)를 참고하면 라이브러리 설계 의도와 API 사용 패턴을 더 쉽게 설명할 수 있다.
 
-```
+````
 
 ```css
 #root {
@@ -2713,11 +2705,10 @@ main {
   }
 }
 
-```
+````
 
 ```typescript
 export * from "./demo";
-
 ```
 
 - 포스트 목록/상세 페이지랑 관련된 라우트, 컴포넌트, 스토어 전부 지웠고 이제 데모 페이지만 렌더링돼.
@@ -4237,10 +4228,9 @@ main {
     max-height: 320px;
   }
 }
-
 ```
 
-```markdown
+````markdown
 # Minimal Global State Sample App
 
 이 프로젝트는 `sangtae-js` Minimal Global State 라이브러리의 필수 기능을 한눈에 시연할 수 있도록 구성된 React + Vite 예제 앱이다. 단일 데모 페이지에서 `createAtom`, `createDerivedAtom`, `createAsyncAtom`, `set`, `get`, `subscribe`, `useAtom` 등의 핵심 API를 인터랙티브하게 체험할 수 있다.
@@ -4251,6 +4241,7 @@ main {
 npm install
 npm run dev
 ```
+````
 
 이후 브라우저에서 `http://localhost:5173`에 접속하면 된다.
 
@@ -4280,7 +4271,7 @@ npm run dev
 - 수동 구독 카드에서 구독을 해제하면 리스트가 초기화되며, 다시 구독을 누르면 `subscribe` 등록 시 바로 현재 값이 한 번 실행된다는 것을 확인할 수 있다.
 - README와 함께 `Design.md`(별도 문서)를 참고하면 라이브러리 설계 의도와 API 사용 패턴을 더 쉽게 설명할 수 있다.
 
-```
+````
 
 - 데모 페이지에 `createAsyncAtom` 카드 추가해서 Promise 기반 가짜 원격 데이터를 `Suspense`로 로딩 보여주고, 로드된 리스트는 `set`으로 즉시 수정·완료 처리할 수 있게 했어.
 - 같은 카드에서 새로고침마다 새로운 atom을 만들어 로딩→완료 플로우를 반복 확인할 수 있고, 렌더 카운트 뱃지로 비동기 값 갱신 시 렌더링 여부도 확인 가능해.
@@ -4304,7 +4295,7 @@ const AsyncTodosCardContent = ({
     <button onClick={onRefresh}>데이터 새로고침</button>
     <button onClick={onCompleteAll}>모두 완료 처리</button>
   </div>
-```
+````
 
 - `npm run dev` 돌려서 새 카드가 로딩→완료 잘 동작하는지 한번 확인해줘.
 
@@ -4797,7 +4788,7 @@ export default DemoPage;
 
 **User**
 
-좋아 그럼 sample-app-vue도 마찬가지로 
+좋아 그럼 sample-app-vue도 마찬가지로
 같은 UI와 데모기능을 가지도록 변경해줄래?
 
 ---
@@ -4812,7 +4803,7 @@ export const $step = createAtom(1);
 export const $nickname = createAtom("");
 export const $counterHistory = createAtom<string[]>([]);
 
-export const $doubleCounter = createDerivedAtom((read) => read($counter) * 2);
+export const $doubleCounter = createDerivedAtom((get) => get($counter) * 2);
 
 export interface CounterSummary {
   counter: number;
@@ -4821,10 +4812,10 @@ export interface CounterSummary {
   greeting: string;
 }
 
-export const $summary: Atom<CounterSummary> = createDerivedAtom((read) => {
-  const counter = read($counter);
-  const step = read($step);
-  const nickname = read($nickname).trim();
+export const $summary: Atom<CounterSummary> = createDerivedAtom((get) => {
+  const counter = get($counter);
+  const step = get($step);
+  const nickname = get($nickname).trim();
 
   return {
     counter,
@@ -4835,12 +4826,10 @@ export const $summary: Atom<CounterSummary> = createDerivedAtom((read) => {
       : "이름을 입력해보세요.",
   };
 });
-
 ```
 
 ```typescript
 export * from "./demo";
-
 ```
 
 ```typescript
@@ -4859,7 +4848,6 @@ export const useRenderCount = () => {
 
   return renderCount;
 };
-
 ```
 
 ```vue
@@ -4872,7 +4860,6 @@ const renders = useRenderCount();
 <template>
   <span class="render-badge">렌더링 {{ renders }}</span>
 </template>
-
 ```
 
 ```vue
@@ -4897,24 +4884,25 @@ const emit = defineEmits<{
   (event: "refresh"): void;
 }>();
 
-const REMOTE_TODO_TEMPLATES: Array<Pick<RemoteTodo, "title" | "description">> = [
-  {
-    title: "API 문서 검토",
-    description: "README 요약을 확인하고 팀 공유 준비",
-  },
-  {
-    title: "디자인 동기화",
-    description: "UI 컴포넌트 상태와 실제 데이터를 비교",
-  },
-  {
-    title: "렌더 카운트 점검",
-    description: "변경된 atom이 컴포넌트에 미치는 영향 확인",
-  },
-  {
-    title: "배포 체크리스트",
-    description: "build, lint, 테스트 명령어가 모두 통과하는지 확인",
-  },
-];
+const REMOTE_TODO_TEMPLATES: Array<Pick<RemoteTodo, "title" | "description">> =
+  [
+    {
+      title: "API 문서 검토",
+      description: "README 요약을 확인하고 팀 공유 준비",
+    },
+    {
+      title: "디자인 동기화",
+      description: "UI 컴포넌트 상태와 실제 데이터를 비교",
+    },
+    {
+      title: "렌더 카운트 점검",
+      description: "변경된 atom이 컴포넌트에 미치는 영향 확인",
+    },
+    {
+      title: "배포 체크리스트",
+      description: "build, lint, 테스트 명령어가 모두 통과하는지 확인",
+    },
+  ];
 
 const loadRemoteTodos = (version: number): Promise<RemoteTodo[]> =>
   new Promise((resolve) => {
@@ -4950,7 +4938,9 @@ const completedCount = computed(() => {
   return todos.value.filter((todo) => todo.completed).length;
 });
 
-const totalCount = computed(() => (Array.isArray(todos.value) ? todos.value.length : 0));
+const totalCount = computed(() =>
+  Array.isArray(todos.value) ? todos.value.length : 0
+);
 
 const onToggleComplete = (id: number) => {
   if (!Array.isArray(todos.value)) return;
@@ -4968,10 +4958,7 @@ const onCompleteAll = () => {
 </script>
 
 <template>
-  <article
-    v-if="!isLoading"
-    class="atom-card atom-card--wide async-card"
-  >
+  <article v-if="!isLoading" class="atom-card atom-card--wide async-card">
     <header class="atom-card__header">
       <h3>createAsyncAtom 데모</h3>
       <RenderBadge />
@@ -5015,12 +5002,18 @@ const onCompleteAll = () => {
     <p class="atom-card__hint">비동기 데이터를 불러오는 중입니다...</p>
   </article>
 </template>
-
 ```
 
 ```vue
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from "vue";
 import { get, set as setAtom, subscribe } from "sangtae-js";
 import { useAtom } from "@/hooks/useAtom";
 import RenderBadge from "@/components/RenderBadge.vue";
@@ -5170,8 +5163,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>Minimal Global State 데모</h2>
         <p>
-          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한 페이지에서
-          확인할 수 있습니다.
+          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한
+          페이지에서 확인할 수 있습니다.
         </p>
       </header>
       <div class="demo-grid">
@@ -5202,8 +5195,8 @@ const refreshAsync = () => {
             <button @click="onSetSameValue">같은 값으로 set</button>
           </div>
           <p class="atom-card__hint">
-            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시 렌더링되지
-            않습니다.
+            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시
+            렌더링되지 않습니다.
           </p>
         </article>
 
@@ -5225,8 +5218,8 @@ const refreshAsync = () => {
             </label>
           </div>
           <p class="atom-card__hint">
-            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인 컴포넌트만
-            렌더링됩니다.
+            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인
+            컴포넌트만 렌더링됩니다.
           </p>
         </article>
 
@@ -5241,8 +5234,8 @@ const refreshAsync = () => {
             placeholder="닉네임을 입력하세요"
           />
           <p class="atom-card__hint">
-            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생 상태가
-            연결됩니다.
+            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생
+            상태가 연결됩니다.
           </p>
         </article>
 
@@ -5284,7 +5277,8 @@ const refreshAsync = () => {
             현재 상태 콘솔로 확인
           </button>
           <p class="atom-card__hint">
-            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수 있습니다.
+            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수
+            있습니다.
           </p>
         </article>
       </div>
@@ -5294,8 +5288,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>비동기 Atom</h2>
         <p>
-          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운 비동기
-          UX를 제공합니다.
+          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운
+          비동기 UX를 제공합니다.
         </p>
       </header>
       <AsyncTodosCard
@@ -5324,8 +5318,8 @@ const refreshAsync = () => {
           </button>
         </div>
         <p class="atom-card__hint">
-          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면 내부
-          listener Set이 비워집니다.
+          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면
+          내부 listener Set이 비워집니다.
         </p>
         <ul v-if="isSubscribed" class="history-list">
           <li v-if="history.length === 0" class="history-list__empty">
@@ -5342,12 +5336,18 @@ const refreshAsync = () => {
     </section>
   </div>
 </template>
-
 ```
 
 ```vue
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from "vue";
 import { get, set as setAtom, subscribe } from "sangtae-js";
 import { useAtom } from "@/hooks/useAtom";
 import RenderBadge from "@/components/RenderBadge.vue";
@@ -5497,8 +5497,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>Minimal Global State 데모</h2>
         <p>
-          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한 페이지에서
-          확인할 수 있습니다.
+          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한
+          페이지에서 확인할 수 있습니다.
         </p>
       </header>
       <div class="demo-grid">
@@ -5529,8 +5529,8 @@ const refreshAsync = () => {
             <button @click="onSetSameValue">같은 값으로 set</button>
           </div>
           <p class="atom-card__hint">
-            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시 렌더링되지
-            않습니다.
+            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시
+            렌더링되지 않습니다.
           </p>
         </article>
 
@@ -5552,8 +5552,8 @@ const refreshAsync = () => {
             </label>
           </div>
           <p class="atom-card__hint">
-            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인 컴포넌트만
-            렌더링됩니다.
+            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인
+            컴포넌트만 렌더링됩니다.
           </p>
         </article>
 
@@ -5568,8 +5568,8 @@ const refreshAsync = () => {
             placeholder="닉네임을 입력하세요"
           />
           <p class="atom-card__hint">
-            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생 상태가
-            연결됩니다.
+            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생
+            상태가 연결됩니다.
           </p>
         </article>
 
@@ -5611,7 +5611,8 @@ const refreshAsync = () => {
             현재 상태 콘솔로 확인
           </button>
           <p class="atom-card__hint">
-            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수 있습니다.
+            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수
+            있습니다.
           </p>
         </article>
       </div>
@@ -5621,8 +5622,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>비동기 Atom</h2>
         <p>
-          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운 비동기
-          UX를 제공합니다.
+          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운
+          비동기 UX를 제공합니다.
         </p>
       </header>
       <AsyncTodosCard
@@ -5651,8 +5652,8 @@ const refreshAsync = () => {
           </button>
         </div>
         <p class="atom-card__hint">
-          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면 내부
-          listener Set이 비워집니다.
+          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면
+          내부 listener Set이 비워집니다.
         </p>
         <ul v-if="isSubscribed" class="history-list">
           <li v-if="history.length === 0" class="history-list__empty">
@@ -5669,8 +5670,6 @@ const refreshAsync = () => {
     </section>
   </div>
 </template>
-
-
 ```
 
 ```vue
@@ -5690,7 +5689,6 @@ import logo from "./assets/vue.svg";
     <DemoPage />
   </main>
 </template>
-
 ```
 
 ```css
@@ -6069,10 +6067,9 @@ main {
     max-height: 320px;
   }
 }
-
 ```
 
-```markdown
+````markdown
 # Minimal Global State Sample App (Vue)
 
 이 프로젝트는 `sangtae-js` Minimal Global State 라이브러리의 필수 기능을 한눈에 시연할 수 있도록 구성된 Vue 3 + Vite 예제 앱이다. 단일 데모 페이지에서 `createAtom`, `createDerivedAtom`, `createAsyncAtom`, `set`, `get`, `subscribe`, `useAtom` 등의 핵심 API를 인터랙티브하게 체험할 수 있다.
@@ -6083,6 +6080,7 @@ main {
 npm install
 npm run dev
 ```
+````
 
 이후 브라우저에서 `http://localhost:5173`에 접속하면 된다.
 
@@ -6112,7 +6110,7 @@ npm run dev
 - 수동 구독 카드에서 구독을 해제하면 리스트가 초기화되며, 다시 구독을 누르면 `subscribe` 등록 시 바로 현재 값이 한 번 실행된다는 것을 확인할 수 있다.
 - README와 함께 `Design.md`(별도 문서)를 참고하면 라이브러리 설계 의도와 API 사용 패턴을 더 쉽게 설명할 수 있다.
 
-```
+````
 
 ```typescript
 import { defineConfig } from "vite";
@@ -6129,11 +6127,18 @@ export default defineConfig({
   },
 });
 
-```
+````
 
 ```vue
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from "vue";
 import { get, set as setAtom, subscribe } from "sangtae-js";
 import { useAtom } from "@/hooks/useAtom";
 import RenderBadge from "@/components/RenderBadge.vue";
@@ -6283,8 +6288,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>Minimal Global State 데모</h2>
         <p>
-          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한 페이지에서
-          확인할 수 있습니다.
+          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한
+          페이지에서 확인할 수 있습니다.
         </p>
       </header>
       <div class="demo-grid">
@@ -6315,8 +6320,8 @@ const refreshAsync = () => {
             <button @click="onSetSameValue">같은 값으로 set</button>
           </div>
           <p class="atom-card__hint">
-            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시 렌더링되지
-            않습니다.
+            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시
+            렌더링되지 않습니다.
           </p>
         </article>
 
@@ -6338,8 +6343,8 @@ const refreshAsync = () => {
             </label>
           </div>
           <p class="atom-card__hint">
-            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인 컴포넌트만
-            렌더링됩니다.
+            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인
+            컴포넌트만 렌더링됩니다.
           </p>
         </article>
 
@@ -6354,8 +6359,8 @@ const refreshAsync = () => {
             placeholder="닉네임을 입력하세요"
           />
           <p class="atom-card__hint">
-            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생 상태가
-            연결됩니다.
+            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생
+            상태가 연결됩니다.
           </p>
         </article>
 
@@ -6397,7 +6402,8 @@ const refreshAsync = () => {
             현재 상태 콘솔로 확인
           </button>
           <p class="atom-card__hint">
-            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수 있습니다.
+            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수
+            있습니다.
           </p>
         </article>
       </div>
@@ -6407,8 +6413,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>비동기 Atom</h2>
         <p>
-          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운 비동기
-          UX를 제공합니다.
+          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운
+          비동기 UX를 제공합니다.
         </p>
       </header>
       <AsyncTodosCard
@@ -6437,8 +6443,8 @@ const refreshAsync = () => {
           </button>
         </div>
         <p class="atom-card__hint">
-          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면 내부
-          listener Set이 비워집니다.
+          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면
+          내부 listener Set이 비워집니다.
         </p>
         <ul v-if="isSubscribed" class="history-list">
           <li v-if="history.length === 0" class="history-list__empty">
@@ -6455,8 +6461,6 @@ const refreshAsync = () => {
     </section>
   </div>
 </template>
-
-
 ```
 
 ```vue
@@ -6610,8 +6614,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>Minimal Global State 데모</h2>
         <p>
-          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한 페이지에서
-          확인할 수 있습니다.
+          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한
+          페이지에서 확인할 수 있습니다.
         </p>
       </header>
       <div class="demo-grid">
@@ -6642,8 +6646,8 @@ const refreshAsync = () => {
             <button @click="onSetSameValue">같은 값으로 set</button>
           </div>
           <p class="atom-card__hint">
-            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시 렌더링되지
-            않습니다.
+            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시
+            렌더링되지 않습니다.
           </p>
         </article>
 
@@ -6665,8 +6669,8 @@ const refreshAsync = () => {
             </label>
           </div>
           <p class="atom-card__hint">
-            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인 컴포넌트만
-            렌더링됩니다.
+            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인
+            컴포넌트만 렌더링됩니다.
           </p>
         </article>
 
@@ -6681,8 +6685,8 @@ const refreshAsync = () => {
             placeholder="닉네임을 입력하세요"
           />
           <p class="atom-card__hint">
-            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생 상태가
-            연결됩니다.
+            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생
+            상태가 연결됩니다.
           </p>
         </article>
 
@@ -6724,7 +6728,8 @@ const refreshAsync = () => {
             현재 상태 콘솔로 확인
           </button>
           <p class="atom-card__hint">
-            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수 있습니다.
+            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수
+            있습니다.
           </p>
         </article>
       </div>
@@ -6734,8 +6739,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>비동기 Atom</h2>
         <p>
-          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운 비동기
-          UX를 제공합니다.
+          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운
+          비동기 UX를 제공합니다.
         </p>
       </header>
       <AsyncTodosCard
@@ -6764,8 +6769,8 @@ const refreshAsync = () => {
           </button>
         </div>
         <p class="atom-card__hint">
-          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면 내부
-          listener Set이 비워집니다.
+          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면
+          내부 listener Set이 비워집니다.
         </p>
         <ul v-if="isSubscribed" class="history-list">
           <li v-if="history.length === 0" class="history-list__empty">
@@ -6782,8 +6787,6 @@ const refreshAsync = () => {
     </section>
   </div>
 </template>
-
-
 ```
 
 ```jsonc
@@ -6807,7 +6810,6 @@ const refreshAsync = () => {
   },
   "include": ["src/**/*.ts", "src/**/*.vue"]
 }
-
 ```
 
 - Vue 샘플 앱도 React 데모랑 같은 UI/동작으로 갈아엎었어. 기존 포스트 목록 전부 지우고 `DemoPage.vue`에서 카운터, 파생 상태, 수동 구독, `createAsyncAtom` 카드까지 그대로 재현했어.
@@ -6847,8 +6849,6 @@ onUpdated(updateBadge);
 <template>
   <span class="render-badge" ref="badgeRef"></span>
 </template>
-
-
 ```
 
 - `RenderBadge`가 Vue에서 자기 자신을 계속 다시 렌더링시키던 구조라서 렌더 횟수가 폭증했어. 이제 렌더 횟수를 직접 DOM에 찍어주는 방식으로 바꿔서 실제 업데이트가 일어날 때만 숫자가 올라가.
@@ -6860,7 +6860,7 @@ onUpdated(updateBadge);
 
 **User**
 
-잘되는것 확인했어 근데  sample-app-vue의 파생 Atom이 동작하지 않는것같아
+잘되는것 확인했어 근데 sample-app-vue의 파생 Atom이 동작하지 않는것같아
 
 ---
 
@@ -6872,7 +6872,14 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { get, set as setAtom, subscribe } from "sangtae-js";
 import { useAtom } from "@/hooks/useAtom";
 import AsyncTodosCard from "@/components/AsyncTodosCard.vue";
-import { $counter, $counterHistory, $doubleCounter, $nickname, $step, $summary } from "@/stores";
+import {
+  $counter,
+  $counterHistory,
+  $doubleCounter,
+  $nickname,
+  $step,
+  $summary,
+} from "@/stores";
 
 const STEP_OPTIONS = [1, 5, 10] as const;
 
@@ -7009,8 +7016,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>Minimal Global State 데모</h2>
         <p>
-          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한 페이지에서
-          확인할 수 있습니다.
+          Atom 생성부터 파생 값, 수동 구독까지 라이브러리의 핵심 기능을 한
+          페이지에서 확인할 수 있습니다.
         </p>
       </header>
       <div class="demo-grid">
@@ -7041,8 +7048,8 @@ const refreshAsync = () => {
             <button @click="onSetSameValue">같은 값으로 set</button>
           </div>
           <p class="atom-card__hint">
-            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시 렌더링되지
-            않습니다.
+            `set` 호출 시 값이 변하지 않으면 구독 중인 컴포넌트가 다시
+            렌더링되지 않습니다.
           </p>
         </article>
 
@@ -7064,8 +7071,8 @@ const refreshAsync = () => {
             </label>
           </div>
           <p class="atom-card__hint">
-            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인 컴포넌트만
-            렌더링됩니다.
+            별도의 Atom으로 관리된 값이 변경되면 해당 Atom을 구독 중인
+            컴포넌트만 렌더링됩니다.
           </p>
         </article>
 
@@ -7080,8 +7087,8 @@ const refreshAsync = () => {
             placeholder="닉네임을 입력하세요"
           />
           <p class="atom-card__hint">
-            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생 상태가
-            연결됩니다.
+            하나의 Atom을 여러 컴포넌트에서 공유할 수 있으며, 입력값과 파생
+            상태가 연결됩니다.
           </p>
         </article>
 
@@ -7123,7 +7130,8 @@ const refreshAsync = () => {
             현재 상태 콘솔로 확인
           </button>
           <p class="atom-card__hint">
-            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수 있습니다.
+            `get`을 호출하면 Vue 컴포넌트 밖에서도 atom 스냅샷을 읽을 수
+            있습니다.
           </p>
         </article>
       </div>
@@ -7133,8 +7141,8 @@ const refreshAsync = () => {
       <header class="demo-section__header">
         <h2>비동기 Atom</h2>
         <p>
-          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운 비동기
-          UX를 제공합니다.
+          `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운
+          비동기 UX를 제공합니다.
         </p>
       </header>
       <AsyncTodosCard
@@ -7163,8 +7171,8 @@ const refreshAsync = () => {
           </button>
         </div>
         <p class="atom-card__hint">
-          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면 내부
-          listener Set이 비워집니다.
+          `subscribe`로 직접 구독을 생성하고 해제할 수 있습니다. 구독이 제거되면
+          내부 listener Set이 비워집니다.
         </p>
         <ul v-if="isSubscribed" class="history-list">
           <li v-if="history.length === 0" class="history-list__empty">
@@ -7181,8 +7189,6 @@ const refreshAsync = () => {
     </section>
   </div>
 </template>
-
-
 ```
 
 - 파생 atom이 값이 안 바뀌던 건 Vue에서 `get($doubleCounter)`만 읽고 구독을 안 걸어서였어. 이제 `useAtom($doubleCounter)`로 ref를 받아서 상태 변경에 반응하도록 바꿨고, render-count watcher도 그 ref를 구독하게 수정했어.
@@ -7221,10 +7227,10 @@ export interface RemoteTodo {
   completed: boolean;
 }
 
-export const $summary = createDerivedAtom<CounterSummary>((read) => {
-  const counter = read($counter);
-  const step = read($step);
-  const nickname = read($nickname).trim();
+export const $summary = createDerivedAtom<CounterSummary>((get) => {
+  const counter = get($counter);
+  const step = get($step);
+  const nickname = get($nickname).trim();
 
   return {
     counter,
@@ -7237,7 +7243,7 @@ export const $summary = createDerivedAtom<CounterSummary>((read) => {
 });
 
 export const $doubleCounter = createDerivedAtom<number>(
-  (read) => read($counter) * 2
+  (get) => get($counter) * 2
 );
 
 export const $counterHistory = createAtom<string[]>([]);
@@ -7285,7 +7291,6 @@ const loadRemoteTodos = (version: number): Promise<RemoteTodo[]> =>
 
 export const createRemoteTodosAtom = (version: number) =>
   createAsyncAtom(loadRemoteTodos(version));
-
 ```
 
 ```typescriptreact
@@ -7717,7 +7722,7 @@ export default DemoPage;
 
 ```
 
-- React 데모의 비동기 카드가 같은 atom을 계속 재사용하고 있어서 새 Promise가 돌지 않았던 거야.  
+- React 데모의 비동기 카드가 같은 atom을 계속 재사용하고 있어서 새 Promise가 돌지 않았던 거야.
 - `createRemoteTodosAtom(version)`을 만들어서 버전마다 새로운 `createAsyncAtom`을 생성하도록 바꿨고, 컴포넌트에서는 이 팩토리를 써서 초기 로드와 새로고침 모두 새 atom을 구독하게 했어.
 
 ```209:231:sample-app-react/src/pages/DemoPage.tsx
@@ -7737,7 +7742,7 @@ const AsyncTodosCard = () => {
     });
 ```
 
-- 이제 `데이터 새로고침` 누르면 로딩 → 새로운 버전 데이터가 정상적으로 갱신될 거야.  
+- 이제 `데이터 새로고침` 누르면 로딩 → 새로운 버전 데이터가 정상적으로 갱신될 거야.
 - 한 번 `npm run dev`로 확인해 보고 문제 있으면 알려줘.
 
 ```typescriptreact
@@ -7804,8 +7809,6 @@ if (props.trigger === undefined) {
 <template>
   <span class="render-badge" ref="badgeRef"></span>
 </template>
-
-
 ```
 
 ```vue
@@ -7830,24 +7833,25 @@ const emit = defineEmits<{
   (event: "refresh"): void;
 }>();
 
-const REMOTE_TODO_TEMPLATES: Array<Pick<RemoteTodo, "title" | "description">> = [
-  {
-    title: "API 문서 검토",
-    description: "README 요약을 확인하고 팀 공유 준비",
-  },
-  {
-    title: "디자인 동기화",
-    description: "UI 컴포넌트 상태와 실제 데이터를 비교",
-  },
-  {
-    title: "렌더 카운트 점검",
-    description: "변경된 atom이 컴포넌트에 미치는 영향 확인",
-  },
-  {
-    title: "배포 체크리스트",
-    description: "build, lint, 테스트 명령어가 모두 통과하는지 확인",
-  },
-];
+const REMOTE_TODO_TEMPLATES: Array<Pick<RemoteTodo, "title" | "description">> =
+  [
+    {
+      title: "API 문서 검토",
+      description: "README 요약을 확인하고 팀 공유 준비",
+    },
+    {
+      title: "디자인 동기화",
+      description: "UI 컴포넌트 상태와 실제 데이터를 비교",
+    },
+    {
+      title: "렌더 카운트 점검",
+      description: "변경된 atom이 컴포넌트에 미치는 영향 확인",
+    },
+    {
+      title: "배포 체크리스트",
+      description: "build, lint, 테스트 명령어가 모두 통과하는지 확인",
+    },
+  ];
 
 const loadRemoteTodos = (version: number): Promise<RemoteTodo[]> =>
   new Promise((resolve) => {
@@ -7883,7 +7887,9 @@ const completedCount = computed(() => {
   return todos.value.filter((todo) => todo.completed).length;
 });
 
-const totalCount = computed(() => (Array.isArray(todos.value) ? todos.value.length : 0));
+const totalCount = computed(() =>
+  Array.isArray(todos.value) ? todos.value.length : 0
+);
 
 const renderTrigger = ref(0);
 
@@ -7911,10 +7917,7 @@ const onCompleteAll = () => {
 </script>
 
 <template>
-  <article
-    v-if="!isLoading"
-    class="atom-card atom-card--wide async-card"
-  >
+  <article v-if="!isLoading" class="atom-card atom-card--wide async-card">
     <header class="atom-card__header">
       <h3>createAsyncAtom 데모</h3>
       <RenderBadge :trigger="renderTrigger" />
@@ -7958,13 +7961,11 @@ const onCompleteAll = () => {
     <p class="atom-card__hint">비동기 데이터를 불러오는 중입니다...</p>
   </article>
 </template>
-
-
 ```
 
-- Vue 비동기 카드에 렌더 카운트가 안 올라가던 건 `RenderBadge`가 자체 업데이트만 감지해서였어.  
+- Vue 비동기 카드에 렌더 카운트가 안 올라가던 건 `RenderBadge`가 자체 업데이트만 감지해서였어.
 - `RenderBadge`에 `trigger` prop을 추가해서 부모가 원하는 시점에 카운트를 갱신하도록 만들고,  
-  `AsyncTodosCard`에서 `isLoading`/`todos` 변화를 감지해 `trigger`를 올려주도록 수정했어.  
+  `AsyncTodosCard`에서 `isLoading`/`todos` 변화를 감지해 `trigger`를 올려주도록 수정했어.
 - 이제 로딩 완료, 새로고침, 완료 토글마다 뱃지가 정상적으로 증가해.
 
 `sample-app-vue`에서 `npm run dev`로 다시 확인해봐. render 배지가 올바르게 증가할 거야.
@@ -7985,4 +7986,3 @@ const onCompleteAll = () => {
 - Vue 쪽은 `RenderBadge`에 `trigger` 옵션이 생겼지만 기본값으로 쓰면 예전처럼 `onUpdated`에서 카운트가 올라가니까 다른 카드들은 기존 구현 그대로 잘 돌고 있어. 비동기 카드만 `:trigger` 넘겨서 추가 렌더를 잡아주고.
 
 추가 테스트는 못 돌렸으니까 한 번 `sample-app-react`랑 `sample-app-vue` 각각 `npm run dev` 돌려서 전체 페이지가 예전처럼 잘 뜨는지만 확인해줘.
-

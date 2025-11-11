@@ -60,10 +60,10 @@ export const $counter = createAtom(0);
 export const $step = createAtom(1);
 export const $nickname = createAtom("");
 
-export const $summary = createDerivedAtom((read) => {
-  const counter = read($counter);
-  const step = read($step);
-  const nickname = read($nickname).trim();
+export const $summary = createDerivedAtom((get) => {
+  const counter = get($counter);
+  const step = get($step);
+  const nickname = get($nickname).trim();
 
   return {
     counter,

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   createAtom,
   get,
+  getAsync,
   set,
   subscribe,
   createDerivedAtom,
@@ -364,6 +365,62 @@ describe("선택 기능 - 파생 Atom", () => {
       expect(callback).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenLastCalledWith(43);
     });
+
+    it("비동기 의존성이 실패하면 파생 atom이 에러를 전파해야 함", async () => {
+      let rejectPromise: (reason?: unknown) => void;
+      const failingSource = new Promise<number>((_, reject) => {
+        rejectPromise = reject;
+      });
+
+      const asyncAtom = createAsyncAtom(failingSource);
+      const derivedAtom = createDerivedAtom((get) => get(asyncAtom) + 1);
+      const callback = vi.fn();
+
+      subscribe(derivedAtom, callback);
+
+      expect(() => get(derivedAtom)).toThrow();
+      expect(callback).not.toHaveBeenCalled();
+
+      const error = new Error("async failed");
+      rejectPromise!(error);
+      await failingSource.catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(() => get(derivedAtom)).toThrow(error);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe("추가 기능 - getAsync", () => {
+  it("동기 atom은 getAsync 호출 시 즉시 값을 반환해야 함", async () => {
+    const atom = createAtom(123);
+    await expect(getAsync(atom)).resolves.toBe(123);
+  });
+
+  it("비동기 atom은 getAsync를 통해 Promise가 해결된 후 값을 반환해야 함", async () => {
+    let resolve: (value: number) => void;
+    const promise = new Promise<number>((res) => {
+      resolve = res;
+    });
+    const asyncAtom = createAsyncAtom(promise);
+
+    const pending = getAsync(asyncAtom);
+    resolve!(55);
+
+    await expect(pending).resolves.toBe(55);
+    await expect(getAsync(asyncAtom)).resolves.toBe(55);
+  });
+
+  it("비동기 atom이 실패하면 getAsync가 에러를 전파해야 함", async () => {
+    const error = new Error("boom");
+    const promise = Promise.reject(error);
+    const asyncAtom = createAsyncAtom(promise);
+
+    await promise.catch(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    await expect(getAsync(asyncAtom)).rejects.toBe(error);
   });
 });
 

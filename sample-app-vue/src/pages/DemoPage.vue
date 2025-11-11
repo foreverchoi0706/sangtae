@@ -2,8 +2,19 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { get, set as setAtom, subscribe } from "sangtae-js";
 import { useAtom } from "sangtae-vue";
+import AsyncInsightsCard from "@/components/AsyncInsightsCard.vue";
 import AsyncTodosCard from "@/components/AsyncTodosCard.vue";
-import { $counter, $counterHistory, $doubleCounter, $nickname, $step, $summary } from "@/stores/demo";
+import {
+  $counter,
+  $counterHistory,
+  $doubleCounter,
+  $nickname,
+  $step,
+  $summary,
+  createRemoteInsightsAtom,
+  createRemoteTeamAtom,
+  createRemoteTodosAtom,
+} from "@/stores/demo";
 
 const STEP_OPTIONS = [1, 5, 10] as const;
 
@@ -128,9 +139,22 @@ const onToggleSubscribe = () => {
   isSubscribed.value = !isSubscribed.value;
 };
 
-const asyncVersion = ref(0);
+const createAsyncState = (version: number) => {
+  const todosAtom = createRemoteTodosAtom(version);
+  const teamAtom = createRemoteTeamAtom(version);
+  return {
+    version,
+    todosAtom,
+    teamAtom,
+    insightsAtom: createRemoteInsightsAtom(todosAtom, teamAtom),
+  };
+};
+
+const asyncState = ref(createAsyncState(0));
+
 const refreshAsync = () => {
-  asyncVersion.value += 1;
+  const nextVersion = asyncState.value.version + 1;
+  asyncState.value = createAsyncState(nextVersion);
 };
 </script>
 
@@ -265,14 +289,25 @@ const refreshAsync = () => {
         <h2>비동기 Atom</h2>
         <p>
           `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고, 자연스러운 비동기
-          UX를 제공합니다.
+          UX를 제공합니다. 여러 비동기 Atom을 파생 Atom으로 합성하는 예제도 함께
+          확인해보세요.
         </p>
       </header>
-      <AsyncTodosCard
-        :key="asyncVersion"
-        :version="asyncVersion"
-        @refresh="refreshAsync"
-      />
+      <div class="demo-grid">
+        <AsyncTodosCard
+          :key="`todos-${asyncState.version}`"
+          :atom="asyncState.todosAtom"
+          :version="asyncState.version"
+          @refresh="refreshAsync"
+        />
+        <AsyncInsightsCard
+          :key="`insights-${asyncState.version}`"
+          :insights-atom="asyncState.insightsAtom"
+          :team-atom="asyncState.teamAtom"
+          :version="asyncState.version"
+          @refresh="refreshAsync"
+        />
+      </div>
     </section>
 
     <section class="demo-section">

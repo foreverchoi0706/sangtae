@@ -1,4 +1,9 @@
-import { createAsyncAtom, createAtom, createDerivedAtom } from "sangtae-js";
+import {
+  createAsyncAtom,
+  createAtom,
+  createDerivedAtom,
+  type Atom,
+} from "sangtae-js";
 
 export const $counter = createAtom<number>(0);
 export const $step = createAtom<number>(1);
@@ -16,6 +21,31 @@ export interface RemoteTodo {
   title: string;
   description: string;
   completed: boolean;
+}
+
+export interface RemoteTeamMember {
+  id: number;
+  name: string;
+  role: string;
+  capacity: number;
+  focus: string;
+}
+
+export interface RemoteAsyncInsightsSuggestion {
+  assignee: RemoteTeamMember;
+  todo: RemoteTodo;
+  message: string;
+}
+
+export interface RemoteAsyncInsights {
+  completedCount: number;
+  pendingCount: number;
+  suggestion: RemoteAsyncInsightsSuggestion | null;
+  teamLoad: Array<
+    RemoteTeamMember & {
+      status: "여유" | "주의" | "포화";
+    }
+  >;
 }
 
 export const $summary = createDerivedAtom<CounterSummary>((read) => {
@@ -82,3 +112,100 @@ const loadRemoteTodos = (version: number): Promise<RemoteTodo[]> =>
 
 export const createRemoteTodosAtom = (version: number) =>
   createAsyncAtom(loadRemoteTodos(version));
+
+const TEAM_TEMPLATES: Array<Pick<RemoteTeamMember, "name" | "role" | "focus">> =
+  [
+    {
+      name: "민지",
+      role: "프론트엔드",
+      focus: "상태 구조 점검",
+    },
+    {
+      name: "현우",
+      role: "백엔드",
+      focus: "API 응답 검증",
+    },
+    {
+      name: "서윤",
+      role: "디자인",
+      focus: "UX 피드백 정리",
+    },
+    {
+      name: "지훈",
+      role: "QA",
+      focus: "회귀 테스트",
+    },
+  ];
+
+const loadRemoteTeam = (version: number): Promise<RemoteTeamMember[]> =>
+  new Promise((resolve) => {
+    const delay = 500 + ((version % 2) + 1) * 250;
+
+    setTimeout(() => {
+      resolve(
+        TEAM_TEMPLATES.map((template, index) => {
+          const capacity =
+            1 + ((version + index * 2) % 4) + (version % 2 === 0 ? 0 : -1);
+
+          return {
+            id: version * 10 + index + 101,
+            name: `${template.name}`,
+            role: template.role,
+            focus: template.focus,
+            capacity: Math.max(0, capacity),
+          };
+        })
+      );
+    }, delay);
+  });
+
+export const createRemoteTeamAtom = (version: number) =>
+  createAsyncAtom(loadRemoteTeam(version));
+
+const resolveStatus = (capacity: number): "여유" | "주의" | "포화" => {
+  if (capacity >= 3) return "여유";
+  if (capacity >= 1) return "주의";
+  return "포화";
+};
+
+export const createRemoteInsightsAtom = (
+  todosAtom: Atom<RemoteTodo[]>,
+  teamAtom: Atom<RemoteTeamMember[]>
+) =>
+  createDerivedAtom<RemoteAsyncInsights>((read) => {
+    const todos = read(todosAtom);
+    const team = read(teamAtom);
+
+    const completedCount = todos.filter((todo) => todo.completed).length;
+    const pendingTodos = todos.filter((todo) => !todo.completed);
+    const pendingCount = pendingTodos.length;
+
+    const sortedTeam = [...team].sort((a, b) => b.capacity - a.capacity);
+    const suggestedMember =
+      sortedTeam.find((member) => member.capacity > 0) ?? sortedTeam[0] ?? null;
+    const highlightedTodo = pendingTodos[0] ?? null;
+
+    const suggestion =
+      suggestedMember && highlightedTodo
+        ? {
+            assignee: suggestedMember,
+            todo: highlightedTodo,
+            message:
+              suggestedMember.capacity > 0
+                ? `${suggestedMember.name}님이 여유가 있어 우선 배정하면 좋겠어요.`
+                : `${suggestedMember.name}님이 최근 경험이 있어 적합해요.`,
+          }
+        : null;
+
+    const teamLoad = team.map((member) => ({
+      ...member,
+      status: resolveStatus(member.capacity),
+    }));
+
+    return {
+      completedCount,
+      pendingCount,
+      suggestion,
+      teamLoad,
+    };
+  });

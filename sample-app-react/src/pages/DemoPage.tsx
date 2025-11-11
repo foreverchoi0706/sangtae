@@ -9,6 +9,10 @@ import {
   $step,
   $summary,
   createRemoteTodosAtom,
+  createRemoteTeamAtom,
+  createRemoteInsightsAtom,
+  type RemoteAsyncInsights,
+  type RemoteTeamMember,
   type RemoteTodo,
 } from "@/stores/demo";
 import { get, set, subscribe, type Atom } from "sangtae-js";
@@ -278,23 +282,17 @@ const AsyncTodosCardContent = ({
 };
 
 /**
- * @description 비동기 투두 카드 컴포넌트
+ * @description 비동기 투두 카드 컨테이너
  */
-const AsyncTodosCard = () => {
-  const [{ atom, version }, setAsyncState] = useState(() => ({
-    atom: createRemoteTodosAtom(0),
-    version: 0,
-  }));
-
-  const onRefresh = () =>
-    setAsyncState((prev) => {
-      const nextVersion = prev.version + 1;
-      return {
-        atom: createRemoteTodosAtom(nextVersion),
-        version: nextVersion,
-      };
-    });
-
+const AsyncTodosCard = ({
+  atom,
+  version,
+  onRefresh,
+}: {
+  atom: Atom<RemoteTodo[]>;
+  version: number;
+  onRefresh: () => void;
+}) => {
   return (
     <Suspense
       fallback={
@@ -314,6 +312,241 @@ const AsyncTodosCard = () => {
         onRefresh={onRefresh}
       />
     </Suspense>
+  );
+};
+
+/**
+ * @description createAsyncAtom 파생 아톰 카드
+ */
+const AsyncInsightsCardContent = ({
+  insightsAtom,
+  teamAtom,
+  version,
+  onRefresh,
+}: {
+  insightsAtom: Atom<RemoteAsyncInsights>;
+  teamAtom: Atom<RemoteTeamMember[]>;
+  version: number;
+  onRefresh: () => void;
+}) => {
+  const [insights] = useAtom(insightsAtom);
+  const [team, setTeam] = useAtom(teamAtom);
+
+  const CAPACITY_PRESETS = [
+    { label: "여유", capacity: 3 },
+    { label: "주의", capacity: 1 },
+    { label: "포화", capacity: 0 },
+  ] as const;
+  const MAX_CAPACITY = 6;
+
+  const resolveStatusLabel = (capacity: number) => {
+    if (capacity >= 3) return "여유";
+    if (capacity >= 1) return "주의";
+    return "포화";
+  };
+
+  const onAdjustCapacity = (id: number, delta: number) => {
+    setTeam(
+      team.map((member) =>
+        member.id === id
+          ? {
+              ...member,
+              capacity: Math.max(
+                0,
+                Math.min(MAX_CAPACITY, member.capacity + delta)
+              ),
+            }
+          : member
+      )
+    );
+  };
+
+  const onSetPreset = (id: number, capacity: number) => {
+    setTeam(
+      team.map((member) =>
+        member.id === id ? { ...member, capacity } : member
+      )
+    );
+  };
+
+  return (
+    <article className="atom-card atom-card--wide async-card">
+      <header className="atom-card__header">
+        <h3>파생 Async Atom</h3>
+        <RenderBadge />
+      </header>
+      <p className="atom-card__hint">
+        두 개의 `createAsyncAtom`에서 불러온 데이터를 `createDerivedAtom`으로
+        합성해 추천 정보를 계산합니다.
+      </p>
+      <div className="async-card__stats">
+        <span>데이터 버전: v{version + 1}</span>
+        <span>팀원 {team.length}명</span>
+        <span>
+          미완료 {insights.pendingCount} / 완료 {insights.completedCount}
+        </span>
+      </div>
+      {insights.suggestion ? (
+        <div className="async-card__summary">
+          <strong>{insights.suggestion.assignee.name}</strong>
+          <span>{insights.suggestion.message}</span>
+          <p>
+            <em>{insights.suggestion.todo.title}</em> 작업을 맡으면 좋겠어요.
+          </p>
+        </div>
+      ) : (
+        <div className="async-card__summary async-card__summary--success">
+          모든 작업이 완료되었습니다! 팀이 휴식을 취해도 좋겠어요.
+        </div>
+      )}
+      <ul className="team-list">
+        {insights.teamLoad.map((member) => {
+          const statusClass =
+            member.status === "여유"
+              ? "team-list__status--positive"
+              : member.status === "주의"
+              ? "team-list__status--warning"
+              : "team-list__status--danger";
+
+          return (
+            <li key={member.id} className="team-list__item">
+              <div className="team-list__meta">
+                <strong>{member.name}</strong>
+                <span>{member.role}</span>
+                <small>{member.focus}</small>
+              </div>
+              <div className={`team-list__status ${statusClass}`}>
+                {member.status} · 여유 {member.capacity}
+              </div>
+              <div className="team-list__controls">
+                <div className="team-list__control-row">
+                  <button
+                    className="team-list__btn"
+                    onClick={() => onAdjustCapacity(member.id, 1)}
+                  >
+                    + 여유도
+                  </button>
+                  <button
+                    className="team-list__btn"
+                    onClick={() => onAdjustCapacity(member.id, -1)}
+                  >
+                    - 여유도
+                  </button>
+                </div>
+                <div className="team-list__control-row">
+                  {CAPACITY_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      className={`team-list__preset${
+                        member.status === preset.label
+                          ? " team-list__preset--active"
+                          : ""
+                      }`}
+                      onClick={() => onSetPreset(member.id, preset.capacity)}
+                    >
+                      {preset.label}로 설정
+                    </button>
+                  ))}
+                </div>
+                <div className="team-list__hint">
+                  현재 상태: {resolveStatusLabel(member.capacity)} / 여유도{" "}
+                  {member.capacity}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="atom-card__actions async-card__actions">
+        <button onClick={onRefresh}>데이터 새로고침</button>
+      </div>
+    </article>
+  );
+};
+
+const AsyncInsightsCard = (props: {
+  insightsAtom: Atom<RemoteAsyncInsights>;
+  teamAtom: Atom<RemoteTeamMember[]>;
+  version: number;
+  onRefresh: () => void;
+}) => {
+  return (
+    <Suspense
+      fallback={
+        <article className="atom-card atom-card--wide async-card async-card--loading">
+          <header className="atom-card__header">
+            <h3>파생 Async Atom</h3>
+          </header>
+          <p className="atom-card__hint">
+            파생 상태를 계산하기 위한 데이터를 불러오는 중입니다...
+          </p>
+        </article>
+      }
+    >
+      <AsyncInsightsCardContent {...props} />
+    </Suspense>
+  );
+};
+
+/**
+ * @description 비동기 아톰 데모 섹션
+ */
+const AsyncAtomsSection = () => {
+  const [{ version, todosAtom, teamAtom, insightsAtom }, setAsyncState] =
+    useState(() => {
+      const initialVersion = 0;
+      const initialTodosAtom = createRemoteTodosAtom(initialVersion);
+      const initialTeamAtom = createRemoteTeamAtom(initialVersion);
+
+      return {
+        version: initialVersion,
+        todosAtom: initialTodosAtom,
+        teamAtom: initialTeamAtom,
+        insightsAtom: createRemoteInsightsAtom(
+          initialTodosAtom,
+          initialTeamAtom
+        ),
+      };
+    });
+
+  const onRefresh = () =>
+    setAsyncState((prev) => {
+      const nextVersion = prev.version + 1;
+      const nextTodosAtom = createRemoteTodosAtom(nextVersion);
+      const nextTeamAtom = createRemoteTeamAtom(nextVersion);
+
+      return {
+        version: nextVersion,
+        todosAtom: nextTodosAtom,
+        teamAtom: nextTeamAtom,
+        insightsAtom: createRemoteInsightsAtom(nextTodosAtom, nextTeamAtom),
+      };
+    });
+
+  return (
+    <section className="demo-section">
+      <header className="demo-section__header">
+        <h2>비동기 Atom</h2>
+        <p>
+          `createAsyncAtom`을 `Suspense`와 함께 사용하는 기본 예제와, 여러
+          비동기 Atom을 파생 Atom으로 묶어 추가 정보를 계산하는 예제를 함께
+          확인할 수 있습니다.
+        </p>
+      </header>
+      <div className="demo-grid">
+        <AsyncTodosCard
+          atom={todosAtom}
+          version={version}
+          onRefresh={onRefresh}
+        />
+        <AsyncInsightsCard
+          insightsAtom={insightsAtom}
+          teamAtom={teamAtom}
+          version={version}
+          onRefresh={onRefresh}
+        />
+      </div>
+    </section>
   );
 };
 
@@ -404,16 +637,7 @@ const DemoPage = () => {
           <SummaryCard />
         </div>
       </section>
-      <section className="demo-section">
-        <header className="demo-section__header">
-          <h2>비동기 Atom</h2>
-          <p>
-            `createAsyncAtom`은 Promise를 전달받아 데이터를 캐싱하고,
-            `Suspense`와 결합하여 자연스러운 비동기 UX를 제공합니다.
-          </p>
-        </header>
-        <AsyncTodosCard />
-      </section>
+      <AsyncAtomsSection />
       <section className="demo-section">
         <header className="demo-section__header">
           <h2>구독자 동작 확인</h2>
