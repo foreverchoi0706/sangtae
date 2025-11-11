@@ -4,7 +4,7 @@ Minimal Global State Management Library
 
 ## 소개
 
-`sangtae-js`는 심플한 API로 전역 상태를 선언하고 관리할 수 있는 초경량 상태 관리 라이브러리입니다. `atom` 개념만으로 동기/비동기 상태와 파생 상태를 모두 다룰 수 있도록 설계했습니다.
+`sangtae-js`는 간단한 API로 전역 상태를 선언하고 관리할 수 있는 초경량 상태 관리 라이브러리입니다. `atom` 개념만으로 동기/비동기 상태와 파생 상태를 모두 다룰 수 있도록 설계했습니다.
 
 ## 주요 특징
 
@@ -138,7 +138,7 @@ type Atom<T> = Readonly<{
 }>;
 ```
 
-- 내부적으로 `unique symbol` 키(`VALUE`, `LISTENERS`)를 사용해 값과 리스너 목록을 은닉합니다.
+- 내부적으로 `unique symbol` 키(`VALUE`, `LISTENERS`)를 사용해 값과 구독 목록을 은닉합니다.
 - 외부에서는 `get`, `set`, `subscribe` 같은 함수를 통해서만 상태를 읽거나 변경할 수 있습니다.
 - `Atom<T>` 타입은 불변(readonly)으로 노출되어 직접 속성을 수정할 수 없으며, 순수한 데이터 컨테이너 역할만 담당합니다.
 
@@ -146,9 +146,9 @@ type Atom<T> = Readonly<{
 
 | 이름                          | 설명                                                                                                    |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `createAtom(initialValue)`    | 초깃값으로 새로운 atom을 만듭니다.                                                                      |
+| `createAtom(initialValue)`    | 초기값으로 새로운 atom을 만듭니다.                                                                      |
 | `createDerivedAtom(callback)` | `callback(get)` 안에서 참조한 atom을 추적해 파생 값을 계산합니다.                                       |
-| `createAsyncAtom(promise)`    | `Promise`를 기반으로 한 비동기 atom을 만듭니다. Suspense와 호환됩니다.                                  |
+| `createAsyncAtom(promise)`    | `Promise`를 기반으로 한 비동기 atom을 만듭니다. React Suspense와 호환됩니다.                            |
 | `get(atom)`                   | atom의 현재 값을 읽습니다. 비동기 atom의 경우 `Promise` 또는 에러를 throw할 수 있습니다.                |
 | `set(atom, newValue)`         | atom 값을 새 값으로 갱신하고, 변경 시 구독자에게 통지합니다.                                            |
 | `subscribe(atom, listener)`   | 값이 바뀔 때마다 `listener`를 실행하고, 즉시 현재 값을 한 번 호출합니다. 반환값은 구독 해제 함수입니다. |
@@ -157,5 +157,5 @@ type Atom<T> = Readonly<{
 
 - `npm run build`: 타입 검사 및 테스트 실행 후 `tsup`으로 번들을 생성합니다.
 - `npm run build-watch`: 개발 중 번들링을 실시간으로 확인합니다.
-- `npm run test`: Vitest 워치 모드를 실행합니다.
+- `npm run test`: Vitest 테스트를 실행합니다.
 - `npm run test:run`: CI 등을 위한 Vitest 단발 실행을 수행합니다.

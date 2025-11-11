@@ -12,7 +12,7 @@
 - 과제 코드: JF002
 - 과제 수령일: 2025.11.05
 - 과제 제출일: 2025.11.11
-- 소요 시간: 약 18~20시간
+- 소요 시간: 약 18시간
 
 ### 2.2 수행 환경
 
@@ -26,6 +26,7 @@
 
 - 프로젝트 내 `@sangtae-js`, `@sangtae-react`, `@sangtae-vue`는 각각 패키지화 가능한 독립적인 프로젝트로 구축하였으며
   패키지 관리의 편의상 npm workspace 를 사용 각각의 프로젝트들을 연동하였습니다.
+- 요구사항중 useAtom은 별도의 `@sangtae-react`에서 구현하였습니다.
 - 현재 작업 환경에서는 별도의 MCP 서버를 설치하거나 구동하지 않았습니다.
 - <a href="./DESIGN.md">DESGIN.md</a> 내 다이어그램은 mermaid로 작성되어있습니다 관련 확장 프로그램 설치를 권장드립니다.
 
@@ -63,12 +64,12 @@
 │   ├── dist
 │   ├── <a href="./@sangtae-js/README.md">README.md</a>
 │   └── ...
-├── @sangtae-react     # React 전용 훅 라이브러리
+├── @sangtae-react     # React 전용 훅 라이브러리 (useAtom)
 │   ├── src
 │   ├── dist
 │   ├── <a href="./@sangtae-react/README.md">README.md</a>
 │   └── ...
-├── @sangtae-vue       # Vue 3 전용 훅 라이브러리
+├── @sangtae-vue       # Vue 3 전용 훅 라이브러리 (useAtom)
 │   ├── src
 │   ├── dist
 │   ├── <a href="./@sangtae-vue/README.md">README.md</a>
