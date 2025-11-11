@@ -8,18 +8,18 @@ type InternalAtom<T> = {
   [LISTENERS]: Set<Listener<T>> | null;
 };
 
+/** 구독 리스너*/
+export type Listener<T> = (value: T) => void;
+
+/** atom 타입 */
+export type Atom<T> = Readonly<InternalAtom<T>>;
+
 // async atom의 현재 상태 정보를 모아둔 객체
 enum ASYNC_ATOM_STATUS {
   SUCCESS = "SUCCESS",
   PENDING = "PENDING",
   ERROR = "ERROR",
 }
-
-/** 구독 리스너*/
-export type Listener<T> = (value: T) => void;
-
-/** atom 타입 */
-export type Atom<T> = Readonly<InternalAtom<T>>;
 
 /**
  * @description 초기값을 받아 새로운 atom을 생성합니다
