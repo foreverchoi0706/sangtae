@@ -41,11 +41,11 @@ export const createDerivedAtom = <T>(
 ): Atom<T> => {
   const state: {
     status: ASYNC_ATOM_STATUS;
-    suspense: Promise<unknown> | null;
+    promise: Promise<unknown> | null;
     error: unknown;
   } = {
     status: ASYNC_ATOM_STATUS.PENDING,
-    suspense: null,
+    promise: null,
     error: undefined,
   };
 
@@ -56,23 +56,23 @@ export const createDerivedAtom = <T>(
   const setStatus = (status: ASYNC_ATOM_STATUS) => {
     state.status = status;
     if (status !== ASYNC_ATOM_STATUS.ERROR) state.error = undefined;
-    if (status !== ASYNC_ATOM_STATUS.PENDING) state.suspense = null;
+    if (status !== ASYNC_ATOM_STATUS.PENDING) state.promise = null;
   };
 
   let atoms = new Set<Atom<unknown>>();
   // 새로 읽힌 atom들과 비교해 끊어진 구독은 정리하고 새 의존성은 구독
   const applySubscriptions = (nextTrackedAtoms: Set<Atom<unknown>>) => {
-    atoms.forEach((atom) => {
-      if (!nextTrackedAtoms.has(atom)) {
-        subscriptions.get(atom)?.();
-        subscriptions.delete(atom);
-      }
-    });
-
     nextTrackedAtoms.forEach((atom) => {
       if (!subscriptions.has(atom)) {
         const unsubscribe = subscribe(atom, () => evaluate(true));
         subscriptions.set(atom, unsubscribe);
+      }
+    });
+
+    atoms.forEach((atom) => {
+      if (!nextTrackedAtoms.has(atom)) {
+        subscriptions.get(atom)?.();
+        subscriptions.delete(atom);
       }
     });
 
@@ -104,7 +104,7 @@ export const createDerivedAtom = <T>(
 
       if (!Object.is(derivedAtom[VALUE], newValue)) {
         derivedAtom[VALUE] = newValue;
-        derivedAtom[LISTENERS]?.forEach((listener) => listener(newValue));
+        emit();
       }
     } catch (thrown) {
       applySubscriptions(nextTrackedAtoms);
@@ -113,16 +113,14 @@ export const createDerivedAtom = <T>(
         // callback이 Promise를 던졌을 때 Suspense 플로우를 유지하도록 처리
         state.status = ASYNC_ATOM_STATUS.PENDING;
         state.error = undefined;
-        state.suspense = thrown;
+        state.promise = thrown;
         emit();
         thrown
           .then(() => {
-            if (state.suspense === thrown) {
-              evaluate(true);
-            }
+            if (state.promise === thrown) evaluate(true);
           })
           .catch((err) => {
-            if (state.suspense === thrown) {
+            if (state.promise === thrown) {
               state.status = ASYNC_ATOM_STATUS.ERROR;
               state.error = err;
               emit();
@@ -145,8 +143,11 @@ export const createDerivedAtom = <T>(
     // 값 읽을 때 상태에 따라 Suspense 또는 에러를 그대로 전달
     get(target, property) {
       if (property === VALUE) {
-        if (state.status === ASYNC_ATOM_STATUS.PENDING && state.suspense) {
-          throw state.suspense;
+        if (
+          state.status === ASYNC_ATOM_STATUS.PENDING &&
+          state.promise !== null
+        ) {
+          throw state.promise;
         }
         if (state.status === ASYNC_ATOM_STATUS.ERROR) {
           throw state.error;
@@ -187,6 +188,12 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
     return asyncAtomCache.get(promise) as Atom<T>;
   }
 
+  // atom 생성 (초기값은 undefined이지만, get 호출 시 Promise throw)
+  const atom: InternalAtom<T> = {
+    [VALUE]: undefined as any, // 타입 체크를 위한 임시 값
+    [LISTENERS]: null,
+  };
+
   // 초기 상태: Promise가 아직 완료되지 않음
   const state: {
     status: ASYNC_ATOM_STATUS;
@@ -196,12 +203,6 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
     status: ASYNC_ATOM_STATUS.PENDING,
     data: undefined,
     error: undefined,
-  };
-
-  // atom 생성 (초기값은 undefined이지만, get 호출 시 Promise throw)
-  const atom: InternalAtom<T> = {
-    [VALUE]: undefined as any, // 타입 체크를 위한 임시 값
-    [LISTENERS]: null,
   };
 
   // Promise 처리
@@ -264,18 +265,26 @@ export const createAsyncAtom = <T>(promise: Promise<T>): Atom<T> => {
 export const get = <T>(atom: Atom<T>): T => atom[VALUE];
 
 /**
- * @description (추가기능) 비동기 atom의 값을 반환합니다
+ * @description (추가기능) 모든 비동기 의존성이 해결될 때까지 기다린 후 비동기 atom의 값을 반환합니다.
  * @param {Atom<T>} atom atom 객체
  * @returns {T} atom의 현재 상태 값을 담은 Promise 객체
  */
 export const getAsync = async <T>(atom: Atom<T>) => {
-  try {
-    return get(atom);
-  } catch (thrown) {
-    if (thrown instanceof Promise) {
-      return (await thrown) as T;
+  // 모든 Suspense 의존성이 해결될 때까지 반복합니다.
+  while (true) {
+    try {
+      // get(atom)이 성공하면 최종 값을 반환
+      return get(atom);
+    } catch (thrown) {
+      // 던져진 것이 Promise(Suspense)이면,
+      if (thrown instanceof Promise) {
+        // 해당 Promise가 완료될 때까지 대기 Promise가 완료되면, while 루프의 처음으로 돌아가 atom의 새로운 값으로 get(atom)을 재시도합니다 (재평가 로직 발동).
+        await thrown;
+      } else {
+        // Promise가 아닌 다른 에러가 던져지면, 에러를 다시 던집니다.
+        throw thrown;
+      }
     }
-    throw thrown;
   }
 };
 

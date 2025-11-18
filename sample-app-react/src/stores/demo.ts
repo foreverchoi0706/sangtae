@@ -209,3 +209,18 @@ export const createRemoteInsightsAtom = (
       teamLoad,
     };
   });
+
+const getPostList = () => {
+  return fetch("https://jsonplaceholder.typicode.com/posts/1").then((res) =>
+    res.json()
+  );
+};
+
+const getPostList2 = () => {
+  return fetch("https://jsonplaceholder.typicode.com/posts/2").then((res) =>
+    res.json()
+  );
+};
+
+export const $asyncAtom = createAsyncAtom(getPostList());
+export const $asyncAtom2 = createAsyncAtom(getPostList2());

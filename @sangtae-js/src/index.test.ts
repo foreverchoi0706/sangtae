@@ -22,12 +22,15 @@ describe("필수 기능 - Atom 생성 및 관리", () => {
       const booleanAtom = createAtom(true);
       const objectAtom = createAtom({ name: "test", count: 1 });
       const arrayAtom = createAtom([1, 2, 3]);
+      const functionAtom = createAtom(() => 42);
 
       expect(get(numberAtom)).toBe(42);
       expect(get(stringAtom)).toBe("hello");
       expect(get(booleanAtom)).toBe(true);
       expect(get(objectAtom)).toEqual({ name: "test", count: 1 });
       expect(get(arrayAtom)).toEqual([1, 2, 3]);
+      expect(typeof get(functionAtom)).toBe("function");
+      expect(get(functionAtom)()).toBe(42);
     });
   });
 
@@ -109,6 +112,36 @@ describe("필수 기능 - Atom 생성 및 관리", () => {
       set(atom, { value: 1 }); // 같은 내용이지만 다른 참조
       expect(callback).toHaveBeenCalledTimes(1);
       expect(callback).toHaveBeenLastCalledWith({ value: 1 });
+    });
+
+    it("함수를 담아도 제대로 동작해야 함", () => {
+      const fn1 = () => 42;
+      const fn2 = () => 100;
+      const atom = createAtom(fn1);
+      const callback = vi.fn();
+
+      subscribe(atom, callback);
+      expect(callback).not.toHaveBeenCalled();
+
+      // 함수를 get으로 가져와서 호출할 수 있어야 함
+      expect(typeof get(atom)).toBe("function");
+      expect(get(atom)()).toBe(42);
+
+      // 다른 함수로 변경하면 구독자에게 알려야 함
+      set(atom, fn2);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenLastCalledWith(fn2);
+      expect(get(atom)()).toBe(100);
+
+      // 같은 함수 참조로 설정하면 구독자에게 알리지 않아야 함
+      set(atom, fn2);
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      // 같은 내용이지만 다른 참조의 함수로 설정하면 구독자에게 알려야 함
+      const fn3 = () => 100; // fn2와 같은 내용이지만 다른 참조
+      set(atom, fn3);
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenLastCalledWith(fn3);
     });
   });
 });
