@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sangtae — Minimal Global State Management</title>
+  <meta name="description" content="atom 개념만으로 전역 상태, 파생 상태, 비동기 상태를 모두 다룰 수 있는 초경량 상태 관리 라이브러리" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #16161f;
+      --border: #1e1e2e;
+      --border2: #2a2a3e;
+      --accent: #7c6af8;
+      --accent-light: #a594ff;
+      --accent-dim: rgba(124,106,248,0.12);
+      --green: #4ade80;
+      --blue: #60a5fa;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --text: #e2e2ef;
+      --text2: #8b8ba7;
+      --text3: #555568;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-size: 18px; font-weight: 700; letter-spacing: -0.5px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--accent-light); }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a {
+      color: var(--text2); text-decoration: none; font-size: 14px; font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-gh {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 16px; border-radius: 8px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text) !important; font-size: 13px !important; font-weight: 600 !important;
+      text-decoration: none; transition: border-color .2s, background .2s;
+    }
+    .nav-gh:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .nav-gh svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 120px 24px 80px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 400px;
+      background: radial-gradient(ellipse, rgba(124,106,248,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 5px 14px; border-radius: 100px;
+      background: var(--accent-dim); border: 1px solid rgba(124,106,248,0.3);
+      font-size: 12px; font-weight: 600; color: var(--accent-light);
+      letter-spacing: 0.5px; text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+    .hero-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-light); display: inline-block; }
+    h1 {
+      font-size: clamp(52px, 8vw, 88px);
+      font-weight: 900;
+      letter-spacing: -3px;
+      line-height: 1;
+      margin-bottom: 24px;
+    }
+    h1 .kor { color: var(--text2); font-weight: 300; font-size: 0.45em; letter-spacing: 4px; display: block; margin-bottom: 8px; }
+    h1 .name { background: linear-gradient(135deg, #fff 30%, var(--accent-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-desc {
+      font-size: clamp(16px, 2.5vw, 20px); color: var(--text2);
+      max-width: 560px; line-height: 1.7; margin-bottom: 48px;
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .btn-primary {
+      padding: 13px 28px; border-radius: 10px;
+      background: var(--accent); color: #fff;
+      font-size: 15px; font-weight: 600; text-decoration: none;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 0 0 0 rgba(124,106,248,0.4);
+    }
+    .btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); box-shadow: 0 8px 30px rgba(124,106,248,0.35); }
+    .btn-secondary {
+      padding: 13px 28px; border-radius: 10px;
+      background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+      font-size: 15px; font-weight: 600; text-decoration: none;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); background: var(--accent-dim); }
+
+    .hero-install {
+      margin-top: 56px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 14px; color: var(--text2);
+    }
+    .hero-install .prompt { color: var(--text3); user-select: none; }
+    .hero-install .cmd { color: var(--accent-light); }
+    .hero-copy {
+      margin-left: 8px; cursor: pointer; background: none; border: none;
+      color: var(--text3); transition: color .2s; padding: 2px;
+    }
+    .hero-copy:hover { color: var(--text2); }
+    .hero-copy svg { width: 15px; height: 15px; display: block; }
+
+    /* ─── SECTION ─── */
+    section { padding: 96px 24px; }
+    .container { max-width: 1080px; margin: 0 auto; }
+    .section-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--accent-light); margin-bottom: 12px;
+    }
+    h2 {
+      font-size: clamp(28px, 4vw, 42px); font-weight: 800;
+      letter-spacing: -1.5px; margin-bottom: 16px; line-height: 1.2;
+    }
+    .section-desc { color: var(--text2); font-size: 17px; max-width: 520px; line-height: 1.7; margin-bottom: 56px; }
+
+    /* ─── FEATURES ─── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    }
+    .feature-card {
+      background: var(--surface); padding: 32px;
+      transition: background .2s;
+    }
+    .feature-card:hover { background: var(--surface2); }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 20px;
+    }
+    .feature-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
+    .feature-card p { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+    /* ─── CODE TABS ─── */
+    .code-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .code-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .code-tab {
+      padding: 12px 20px; font-size: 13px; font-weight: 600;
+      color: var(--text3); cursor: pointer; border: none; background: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .2s, border-color .2s; white-space: nowrap;
+    }
+    .code-tab.active { color: var(--accent-light); border-bottom-color: var(--accent-light); }
+    .code-tab:hover:not(.active) { color: var(--text2); }
+    .code-panel { display: none; }
+    .code-panel.active { display: block; }
+
+    pre {
+      padding: 28px 32px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.75;
+    }
+
+    /* syntax */
+    .kw  { color: #c084fc; }   /* keyword */
+    .fn  { color: #60a5fa; }   /* function */
+    .st  { color: #86efac; }   /* string */
+    .cm  { color: #4b5563; }   /* comment */
+    .nm  { color: #fbbf24; }   /* name/variable */
+    .op  { color: #94a3b8; }   /* operator */
+    .ty  { color: #67e8f9; }   /* type */
+    .nu  { color: #fb923c; }   /* number */
+    .plain { color: #e2e2ef; }
+
+    /* ─── ARCHITECTURE ─── */
+    .arch-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    @media (max-width: 680px) { .arch-grid { grid-template-columns: 1fr; } }
+
+    .arch-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 28px;
+    }
+    .arch-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .arch-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .arch-card h3 { font-size: 15px; font-weight: 700; }
+    .arch-items { display: flex; flex-direction: column; gap: 10px; }
+    .arch-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      font-size: 13.5px;
+    }
+    .arch-item-code {
+      font-family: var(--mono); font-size: 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 5px; color: var(--accent-light);
+      white-space: nowrap; flex-shrink: 0; line-height: 1.8;
+    }
+    .arch-item-desc { color: var(--text2); line-height: 1.5; }
+
+    /* ─── PACKAGES ─── */
+    .packages-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 720px) { .packages-grid { grid-template-columns: 1fr; } }
+
+    .pkg-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 28px; position: relative; overflow: hidden;
+      transition: border-color .2s, transform .2s;
+    }
+    .pkg-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .pkg-accent {
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .pkg-icon { font-size: 28px; margin-bottom: 16px; }
+    .pkg-name {
+      font-family: var(--mono); font-size: 15px; font-weight: 600;
+      color: var(--accent-light); margin-bottom: 8px;
+    }
+    .pkg-desc { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 20px; }
+    .pkg-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px;
+      background: var(--accent-dim); color: var(--accent-light); border: 1px solid rgba(124,106,248,0.2);
+    }
+    .tag.green { background: rgba(74,222,128,0.08); color: var(--green); border-color: rgba(74,222,128,0.2); }
+    .tag.blue { background: rgba(96,165,250,0.08); color: var(--blue); border-color: rgba(96,165,250,0.2); }
+    .tag.amber { background: rgba(251,191,36,0.08); color: var(--amber); border-color: rgba(251,191,36,0.2); }
+
+    /* ─── STATUS TABLE ─── */
+    .status-table { width: 100%; border-collapse: collapse; }
+    .status-table th {
+      text-align: left; padding: 12px 20px;
+      font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--text3); border-bottom: 1px solid var(--border);
+    }
+    .status-table td {
+      padding: 14px 20px; font-size: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-table tr:last-child td { border-bottom: none; }
+    .status-table tr:hover td { background: var(--surface2); }
+    .badge-done {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(74,222,128,0.1); color: var(--green);
+      border: 1px solid rgba(74,222,128,0.2);
+      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px;
+    }
+    .badge-done::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .mono-cell { font-family: var(--mono); font-size: 12.5px; color: var(--accent-light); }
+
+    /* ─── FRAMEWORK COMPARE ─── */
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 680px) { .compare-grid { grid-template-columns: 1fr; } }
+
+    .compare-card {
+      border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    }
+    .compare-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .fw-badge {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800;
+    }
+    .fw-react { background: rgba(96,165,250,0.15); color: var(--blue); }
+    .fw-vue { background: rgba(74,222,128,0.12); color: var(--green); }
+    .compare-header span { font-size: 14px; font-weight: 600; }
+    .compare-header small { margin-left: auto; font-size: 12px; color: var(--text3); font-family: var(--mono); }
+    .compare-card pre { font-size: 12.5px; padding: 20px 24px; background: var(--surface); }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .footer-inner { max-width: 1080px; margin: 0 auto; }
+    .footer-logo { font-size: 22px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+    .footer-logo span { color: var(--accent-light); }
+    footer p { font-size: 13px; color: var(--text3); margin-bottom: 20px; }
+    .footer-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: var(--text3); text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--text2); }
+
+    /* ─── DIVIDER ─── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    /* ─── SCROLL FADE ─── */
+    .fade-in {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      section { padding: 64px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">sang<span>tae</span></a>
+  <div class="nav-links">
+    <a href="#features">특징</a>
+    <a href="#api">API</a>
+    <a href="#packages">패키지</a>
+    <a href="#status">구현 현황</a>
+    <a href="https://github.com/foreverchoi0706/sangtae" class="nav-gh" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge">
+    <span></span>
+    Minimal · Atom-based · Framework Agnostic
+  </div>
+  <h1>
+    <span class="kor">상태 관리 라이브러리</span>
+    <span class="name">sangtae</span>
+  </h1>
+  <p class="hero-desc">
+    atom 개념만으로 전역 상태, 파생 상태, 비동기 상태를 모두 다룰 수 있는
+    초경량 상태 관리 라이브러리. React, Vue 어디서든 동일한 API로 동작합니다.
+  </p>
+  <div class="hero-actions">
+    <a href="#api" class="btn-primary">시작하기</a>
+    <a href="https://github.com/foreverchoi0706/sangtae" class="btn-secondary" target="_blank" rel="noopener">GitHub에서 보기</a>
+  </div>
+  <div class="hero-install">
+    <span class="prompt">$</span>
+    <span class="cmd" id="install-cmd">npm install sangtae-js</span>
+    <button class="hero-copy" onclick="copyInstall()" title="복사">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+        <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"/>
+      </svg>
+    </button>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <p class="section-label fade-in">Features</p>
+    <h2 class="fade-in">필요한 것만, 딱 그만큼</h2>
+    <p class="section-desc fade-in">복잡한 보일러플레이트 없이 atom 하나로 상태를 선언하고 어디서든 구독하세요.</p>
+
+    <div class="features-grid fade-in">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(124,106,248,0.12);">⚛️</div>
+        <h3>Atom 기반 설계</h3>
+        <p>상태를 최소 단위인 atom으로 격리합니다. Provider나 전역 store 없이 atom 단위로 구독자를 관리합니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(74,222,128,0.1);">🔗</div>
+        <h3>파생 Atom</h3>
+        <p><code style="font-family:var(--mono);font-size:12px;color:var(--accent-light)">createDerivedAtom</code>으로 여러 atom을 조합해 자동으로 추적되는 계산된 상태를 만듭니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(96,165,250,0.1);">⏳</div>
+        <h3>비동기 Atom + Suspense</h3>
+        <p>Promise 기반 비동기 상태를 <code style="font-family:var(--mono);font-size:12px;color:var(--accent-light)">createAsyncAtom</code>으로 감싸면 React/Vue Suspense와 자연스럽게 연동됩니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(251,191,36,0.1);">🧹</div>
+        <h3>GC-Friendly 메모리 관리</h3>
+        <p>마지막 구독자가 해제되면 내부 listener Set을 null로 되돌려 메모리 누수 없이 GC 대상이 됩니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(248,113,113,0.1);">🔒</div>
+        <h3>TypeScript 우선</h3>
+        <p>제네릭 기반 API로 컴파일 타임 타입을 보장합니다. atom 타입이 그대로 추론됩니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(167,139,250,0.1);">🌐</div>
+        <h3>Framework Agnostic</h3>
+        <p>React, Vue 없이도 <code style="font-family:var(--mono);font-size:12px;color:var(--accent-light)">get · set · subscribe</code> 만으로 어떤 환경에서든 동작합니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- API -->
+<section id="api">
+  <div class="container">
+    <p class="section-label fade-in">API Reference</p>
+    <h2 class="fade-in">심플한 API, 강력한 표현력</h2>
+    <p class="section-desc fade-in">6개의 함수만으로 복잡한 상태 시나리오를 모두 처리할 수 있습니다.</p>
+
+    <div class="code-section fade-in">
+      <div class="code-tabs">
+        <button class="code-tab active" data-tab="basic">기본 사용</button>
+        <button class="code-tab" data-tab="derived">파생 Atom</button>
+        <button class="code-tab" data-tab="async">비동기 Atom</button>
+        <button class="code-tab" data-tab="react">React 연동</button>
+        <button class="code-tab" data-tab="vue">Vue 연동</button>
+      </div>
+
+      <div id="tab-basic" class="code-panel active">
+        <pre><span class="kw">import</span> <span class="plain">{ </span><span class="nm">createAtom</span><span class="plain">, </span><span class="nm">get</span><span class="plain">, </span><span class="nm">set</span><span class="plain">, </span><span class="nm">subscribe</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"sangtae-js"</span><span class="plain">;</span>
+
+<span class="cm">// atom 생성</span>
+<span class="kw">const</span> <span class="nm">counterAtom</span> <span class="op">=</span> <span class="fn">createAtom</span><span class="plain">(</span><span class="nu">0</span><span class="plain">);</span>
+
+<span class="cm">// 구독 — 값이 변경될 때마다 콜백 실행</span>
+<span class="kw">const</span> <span class="nm">unsubscribe</span> <span class="op">=</span> <span class="fn">subscribe</span><span class="plain">(</span><span class="nm">counterAtom</span><span class="plain">, (</span><span class="nm">value</span><span class="plain">) </span><span class="op">=&gt;</span> <span class="plain">{</span>
+  <span class="nm">console</span><span class="plain">.</span><span class="fn">log</span><span class="plain">(</span><span class="st">"현재 값:"</span><span class="plain">, </span><span class="nm">value</span><span class="plain">);</span>
+<span class="plain">});</span>
+
+<span class="fn">set</span><span class="plain">(</span><span class="nm">counterAtom</span><span class="plain">, </span><span class="nu">1</span><span class="plain">);</span>  <span class="cm">// 콘솔: "현재 값: 1"</span>
+<span class="nm">console</span><span class="plain">.</span><span class="fn">log</span><span class="plain">(</span><span class="fn">get</span><span class="plain">(</span><span class="nm">counterAtom</span><span class="plain">));</span>  <span class="cm">// 1</span>
+
+<span class="cm">// 동일 값으로 set하면 구독자에게 알리지 않음</span>
+<span class="fn">set</span><span class="plain">(</span><span class="nm">counterAtom</span><span class="plain">, </span><span class="nu">1</span><span class="plain">);</span>  <span class="cm">// 콜백 실행 안 됨 (Object.is 비교)</span>
+
+<span class="nm">unsubscribe</span><span class="plain">();</span>  <span class="cm">// 구독 해제 — 마지막 구독자면 내부 Set도 GC 대상</span></pre>
+      </div>
+
+      <div id="tab-derived" class="code-panel">
+        <pre><span class="kw">import</span> <span class="plain">{ </span><span class="nm">createAtom</span><span class="plain">, </span><span class="nm">createDerivedAtom</span><span class="plain">, </span><span class="nm">set</span><span class="plain">, </span><span class="nm">get</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"sangtae-js"</span><span class="plain">;</span>
+
+<span class="kw">const</span> <span class="nm">priceAtom</span>    <span class="op">=</span> <span class="fn">createAtom</span><span class="plain">(</span><span class="nu">10_000</span><span class="plain">);</span>
+<span class="kw">const</span> <span class="nm">quantityAtom</span> <span class="op">=</span> <span class="fn">createAtom</span><span class="plain">(</span><span class="nu">2</span><span class="plain">);</span>
+
+<span class="cm">// 의존 atom을 자동으로 추적</span>
+<span class="kw">const</span> <span class="nm">totalPriceAtom</span> <span class="op">=</span> <span class="fn">createDerivedAtom</span><span class="plain">((</span><span class="nm">get</span><span class="plain">) </span><span class="op">=&gt;</span>
+  <span class="fn">get</span><span class="plain">(</span><span class="nm">priceAtom</span><span class="plain">) </span><span class="op">*</span> <span class="fn">get</span><span class="plain">(</span><span class="nm">quantityAtom</span><span class="plain">)</span>
+<span class="plain">);</span>
+
+<span class="nm">console</span><span class="plain">.</span><span class="fn">log</span><span class="plain">(</span><span class="fn">get</span><span class="plain">(</span><span class="nm">totalPriceAtom</span><span class="plain">));</span>  <span class="cm">// 20000</span>
+
+<span class="fn">set</span><span class="plain">(</span><span class="nm">quantityAtom</span><span class="plain">, </span><span class="nu">3</span><span class="plain">);</span>
+<span class="nm">console</span><span class="plain">.</span><span class="fn">log</span><span class="plain">(</span><span class="fn">get</span><span class="plain">(</span><span class="nm">totalPriceAtom</span><span class="plain">));</span>  <span class="cm">// 30000 (자동 갱신)</span>
+
+<span class="cm">// 파생 값이 같으면 구독자에게 알리지 않음</span>
+<span class="fn">set</span><span class="plain">(</span><span class="nm">priceAtom</span><span class="plain">, </span><span class="nu">5_000</span><span class="plain">);</span>
+<span class="fn">set</span><span class="plain">(</span><span class="nm">quantityAtom</span><span class="plain">, </span><span class="nu">6</span><span class="plain">);</span>  <span class="cm">// total은 여전히 30000 → 알림 없음</span></pre>
+      </div>
+
+      <div id="tab-async" class="code-panel">
+        <pre><span class="kw">import</span> <span class="plain">{ </span><span class="nm">createAsyncAtom</span><span class="plain">, </span><span class="nm">getAsync</span><span class="plain">, </span><span class="nm">set</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"sangtae-js"</span><span class="plain">;</span>
+
+<span class="cm">// Promise로 비동기 atom 생성</span>
+<span class="kw">const</span> <span class="nm">$todos</span> <span class="op">=</span> <span class="fn">createAsyncAtom</span><span class="plain">(</span>
+  <span class="fn">fetch</span><span class="plain">(</span><span class="st">"/api/todos"</span><span class="plain">).</span><span class="fn">then</span><span class="plain">(</span><span class="nm">res</span> <span class="op">=&gt;</span> <span class="nm">res</span><span class="plain">.</span><span class="fn">json</span><span class="plain">())</span>
+<span class="plain">);</span>
+
+<span class="cm">// await로 값을 가져올 수 있음</span>
+<span class="kw">const</span> <span class="nm">todos</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">getAsync</span><span class="plain">(</span><span class="nm">$todos</span><span class="plain">);</span>
+<span class="nm">console</span><span class="plain">.</span><span class="fn">log</span><span class="plain">(</span><span class="nm">todos</span><span class="plain">);</span>
+
+<span class="cm">// 동일 Promise로 createAsyncAtom을 다시 호출해도</span>
+<span class="cm">// WeakMap 캐시 덕분에 항상 같은 atom 인스턴스를 반환</span>
+
+<span class="cm">// set으로 값을 동기적으로 덮어쓸 수 있음</span>
+<span class="fn">set</span><span class="plain">(</span><span class="nm">$todos</span><span class="plain">, [...</span><span class="nm">todos</span><span class="plain">, { </span><span class="nm">id</span><span class="plain">: </span><span class="nu">99</span><span class="plain">, </span><span class="nm">title</span><span class="plain">: </span><span class="st">"새 할 일"</span><span class="plain">, </span><span class="nm">completed</span><span class="plain">: </span><span class="kw">false</span><span class="plain"> }]);</span></pre>
+      </div>
+
+      <div id="tab-react" class="code-panel">
+        <pre><span class="cm">// stores/counter.ts</span>
+<span class="kw">import</span> <span class="plain">{ </span><span class="nm">createAtom</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"sangtae-js"</span><span class="plain">;</span>
+
+<span class="kw">export const</span> <span class="nm">$counter</span> <span class="op">=</span> <span class="fn">createAtom</span><span class="plain">(</span><span class="nu">0</span><span class="plain">);</span>
+<span class="kw">export const</span> <span class="nm">$step</span>    <span class="op">=</span> <span class="fn">createAtom</span><span class="plain">(</span><span class="nu">1</span><span class="plain">);</span>
+
+<span class="cm">// components/Counter.tsx</span>
+<span class="kw">import</span> <span class="plain">{ </span><span class="nm">useAtom</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"sangtae-react"</span><span class="plain">;</span>
+<span class="kw">import</span> <span class="plain">{ </span><span class="nm">$counter</span><span class="plain">, </span><span class="nm">$step</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"../stores/counter"</span><span class="plain">;</span>
+
+<span class="kw">export default function</span> <span class="fn">Counter</span><span class="plain">() {</span>
+  <span class="kw">const</span> <span class="plain">[</span><span class="nm">counter</span><span class="plain">, </span><span class="nm">setCounter</span><span class="plain">] </span><span class="op">=</span> <span class="fn">useAtom</span><span class="plain">(</span><span class="nm">$counter</span><span class="plain">);</span>
+  <span class="kw">const</span> <span class="plain">[</span><span class="nm">step</span><span class="plain">]              </span><span class="op">=</span> <span class="fn">useAtom</span><span class="plain">(</span><span class="nm">$step</span><span class="plain">);</span>
+
+  <span class="kw">return</span> <span class="plain">(</span>
+    <span class="op">&lt;</span><span class="ty">div</span><span class="op">&gt;</span>
+      <span class="op">&lt;</span><span class="ty">button</span> <span class="nm">onClick</span><span class="op">=</span><span class="plain">{() </span><span class="op">=&gt;</span> <span class="fn">setCounter</span><span class="plain">(</span><span class="nm">counter</span> <span class="op">-</span> <span class="nm">step</span><span class="plain">)}</span><span class="op">&gt;</span><span class="plain">-</span><span class="op">&lt;/</span><span class="ty">button</span><span class="op">&gt;</span>
+      <span class="op">&lt;</span><span class="ty">strong</span><span class="op">&gt;</span><span class="plain">{</span><span class="nm">counter</span><span class="plain">}</span><span class="op">&lt;/</span><span class="ty">strong</span><span class="op">&gt;</span>
+      <span class="op">&lt;</span><span class="ty">button</span> <span class="nm">onClick</span><span class="op">=</span><span class="plain">{() </span><span class="op">=&gt;</span> <span class="fn">setCounter</span><span class="plain">(</span><span class="nm">counter</span> <span class="op">+</span> <span class="nm">step</span><span class="plain">)}</span><span class="op">&gt;</span><span class="plain">+</span><span class="op">&lt;/</span><span class="ty">button</span><span class="op">&gt;</span>
+    <span class="op">&lt;/</span><span class="ty">div</span><span class="op">&gt;</span>
+  <span class="plain">);</span>
+<span class="plain">}</span></pre>
+      </div>
+
+      <div id="tab-vue" class="code-panel">
+        <pre><span class="cm">&lt;!-- components/CounterCard.vue --&gt;</span>
+<span class="op">&lt;</span><span class="ty">script</span> <span class="nm">setup</span> <span class="nm">lang</span><span class="op">=</span><span class="st">"ts"</span><span class="op">&gt;</span>
+<span class="kw">import</span> <span class="plain">{ </span><span class="nm">computed</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"vue"</span><span class="plain">;</span>
+<span class="kw">import</span> <span class="plain">{ </span><span class="nm">useAtom</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"sangtae-vue"</span><span class="plain">;</span>
+<span class="kw">import</span> <span class="plain">{ </span><span class="nm">$counter</span><span class="plain">, </span><span class="nm">$step</span><span class="plain"> } </span><span class="kw">from</span> <span class="st">"@/stores/counter"</span><span class="plain">;</span>
+
+<span class="kw">const</span> <span class="plain">[</span><span class="nm">counter</span><span class="plain">, </span><span class="nm">setCounter</span><span class="plain">] </span><span class="op">=</span> <span class="fn">useAtom</span><span class="plain">(</span><span class="nm">$counter</span><span class="plain">);</span>
+<span class="kw">const</span> <span class="plain">[</span><span class="nm">step</span><span class="plain">]              </span><span class="op">=</span> <span class="fn">useAtom</span><span class="plain">(</span><span class="nm">$step</span><span class="plain">);</span>
+
+<span class="kw">const</span> <span class="nm">decrease</span> <span class="op">=</span> <span class="plain">() </span><span class="op">=&gt;</span> <span class="fn">setCounter</span><span class="plain">(</span><span class="nm">counter</span><span class="plain">.</span><span class="nm">value</span> <span class="op">-</span> <span class="nm">step</span><span class="plain">.</span><span class="nm">value</span><span class="plain">);</span>
+<span class="kw">const</span> <span class="nm">increase</span> <span class="op">=</span> <span class="plain">() </span><span class="op">=&gt;</span> <span class="fn">setCounter</span><span class="plain">(</span><span class="nm">counter</span><span class="plain">.</span><span class="nm">value</span> <span class="op">+</span> <span class="nm">step</span><span class="plain">.</span><span class="nm">value</span><span class="plain">);</span>
+<span class="kw">const</span> <span class="nm">label</span>    <span class="op">=</span> <span class="fn">computed</span><span class="plain">(() </span><span class="op">=&gt;</span> <span class="st">`</span><span class="plain">${</span><span class="nm">counter</span><span class="plain">.</span><span class="nm">value</span><span class="plain">}</span><span class="st"> (step </span><span class="plain">${</span><span class="nm">step</span><span class="plain">.</span><span class="nm">value</span><span class="plain">}</span><span class="st">)`</span><span class="plain">);</span>
+<span class="op">&lt;/</span><span class="ty">script</span><span class="op">&gt;</span>
+
+<span class="op">&lt;</span><span class="ty">template</span><span class="op">&gt;</span>
+  <span class="op">&lt;</span><span class="ty">section</span><span class="op">&gt;</span>
+    <span class="op">&lt;</span><span class="ty">p</span><span class="op">&gt;</span><span class="plain">{{ </span><span class="nm">label</span><span class="plain"> }}</span><span class="op">&lt;/</span><span class="ty">p</span><span class="op">&gt;</span>
+    <span class="op">&lt;</span><span class="ty">button</span> <span class="nm">@click</span><span class="op">=</span><span class="st">"decrease"</span><span class="op">&gt;</span><span class="plain">-</span><span class="op">&lt;/</span><span class="ty">button</span><span class="op">&gt;</span>
+    <span class="op">&lt;</span><span class="ty">button</span> <span class="nm">@click</span><span class="op">=</span><span class="st">"increase"</span><span class="op">&gt;</span><span class="plain">+</span><span class="op">&lt;/</span><span class="ty">button</span><span class="op">&gt;</span>
+  <span class="op">&lt;/</span><span class="ty">section</span><span class="op">&gt;</span>
+<span class="op">&lt;/</span><span class="ty">template</span><span class="op">&gt;</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ARCHITECTURE -->
+<section>
+  <div class="container">
+    <p class="section-label fade-in">Architecture</p>
+    <h2 class="fade-in">내부 설계 원칙</h2>
+    <p class="section-desc fade-in">Symbol 기반 은닉 필드, Object.is 비교, WeakMap 캐시로 성능과 안전성을 동시에 확보했습니다.</p>
+
+    <div class="arch-grid fade-in">
+      <div class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-dot" style="background:var(--accent-light)"></div>
+          <h3>Atom 내부 구조</h3>
+        </div>
+        <div class="arch-items">
+          <div class="arch-item">
+            <span class="arch-item-code">Symbol(VALUE)</span>
+            <span class="arch-item-desc">현재 값을 Symbol 키로 은닉하여 외부에서 직접 접근 불가</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">Symbol(LISTENERS)</span>
+            <span class="arch-item-desc">구독자 Set. 마지막 구독 해제 시 null로 되돌려 GC 대상화</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">Object.is</span>
+            <span class="arch-item-desc">NaN, ±0 등 엣지케이스도 정확히 처리하는 동등성 비교</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">Readonly&lt;T&gt;</span>
+            <span class="arch-item-desc">외부에 불변으로 노출 — API 함수로만 읽기·쓰기 가능</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-dot" style="background:var(--green)"></div>
+          <h3>파생 Atom 동작</h3>
+        </div>
+        <div class="arch-items">
+          <div class="arch-item">
+            <span class="arch-item-code">trackedGet</span>
+            <span class="arch-item-desc">callback(get) 실행 중 접근한 atom을 Set에 자동 수집</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">Map 기반 구독</span>
+            <span class="arch-item-desc">의존 atom 변경 시 끊어진 구독은 즉시 해제</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">Suspense 대응</span>
+            <span class="arch-item-desc">평가 중 Promise throw → PENDING, 해결 시 자동 재평가</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">순환 차단</span>
+            <span class="arch-item-desc">파생 atom이 자신을 참조하는 무한 루프 구조적으로 방지</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-dot" style="background:var(--blue)"></div>
+          <h3>비동기 Atom 캐시</h3>
+        </div>
+        <div class="arch-items">
+          <div class="arch-item">
+            <span class="arch-item-code">WeakMap</span>
+            <span class="arch-item-desc">Promise를 키로 캐싱 — 동일 Promise면 항상 같은 atom 반환</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">Proxy get 트랩</span>
+            <span class="arch-item-desc">PENDING이면 Promise throw, ERROR면 에러 throw, SUCCESS면 데이터 반환</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">getAsync</span>
+            <span class="arch-item-desc">throw된 Promise를 await 처리해 async/await 패턴으로 사용 가능</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">set 오버라이드</span>
+            <span class="arch-item-desc">동기값으로 덮어쓰면 status가 success로 전환</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-dot" style="background:var(--amber)"></div>
+          <h3>React 연동 설계</h3>
+        </div>
+        <div class="arch-items">
+          <div class="arch-item">
+            <span class="arch-item-code">useSyncExternalStore</span>
+            <span class="arch-item-desc">React 18 Concurrent 렌더링에서도 스냅샷 싱크 안전 보장</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">useCallback</span>
+            <span class="arch-item-desc">atom props 변경 시 구독/해제 반복 방지를 위해 안정화</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">배치 업데이트</span>
+            <span class="arch-item-desc">React의 자동 배치(Auto Batching)와 연동하여 렌더 횟수 최소화</span>
+          </div>
+          <div class="arch-item">
+            <span class="arch-item-code">onUnmounted</span>
+            <span class="arch-item-desc">Vue에서는 생명주기 훅으로 구독 해제 자동 관리</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- PACKAGES -->
+<section id="packages">
+  <div class="container">
+    <p class="section-label fade-in">Packages</p>
+    <h2 class="fade-in">3개의 패키지, 하나의 API</h2>
+    <p class="section-desc fade-in">npm workspace 기반 모노레포로 구성되어 있으며, 각 패키지는 독립적으로 설치해 사용할 수 있습니다.</p>
+
+    <div class="packages-grid fade-in">
+      <div class="pkg-card">
+        <div class="pkg-accent" style="background:linear-gradient(90deg,#7c6af8,#a594ff)"></div>
+        <div class="pkg-icon">⚡</div>
+        <div class="pkg-name">sangtae-js</div>
+        <p class="pkg-desc">프레임워크 독립 코어 라이브러리. atom 생성, 파생, 비동기 상태, 구독 관리를 포함한 모든 핵심 기능을 담고 있습니다.</p>
+        <div class="pkg-tags">
+          <span class="tag">createAtom</span>
+          <span class="tag">createDerivedAtom</span>
+          <span class="tag">createAsyncAtom</span>
+          <span class="tag green">Vanilla JS</span>
+        </div>
+      </div>
+
+      <div class="pkg-card">
+        <div class="pkg-accent" style="background:linear-gradient(90deg,#60a5fa,#93c5fd)"></div>
+        <div class="pkg-icon">⚛️</div>
+        <div class="pkg-name">sangtae-react</div>
+        <p class="pkg-desc">React 18+ 전용 훅 바인딩. useSyncExternalStore 기반의 useAtom 훅으로 Concurrent 렌더링에서도 안전하게 동작합니다.</p>
+        <div class="pkg-tags">
+          <span class="tag blue">useAtom</span>
+          <span class="tag blue">React 18+</span>
+          <span class="tag blue">Suspense</span>
+        </div>
+      </div>
+
+      <div class="pkg-card">
+        <div class="pkg-accent" style="background:linear-gradient(90deg,#4ade80,#86efac)"></div>
+        <div class="pkg-icon">💚</div>
+        <div class="pkg-name">sangtae-vue</div>
+        <p class="pkg-desc">Vue 3 Composition API 전용 훅 바인딩. Ref 기반 인터페이스와 onUnmounted 생명주기 훅으로 자동 구독 관리를 제공합니다.</p>
+        <div class="pkg-tags">
+          <span class="tag green">useAtom</span>
+          <span class="tag green">Vue 3</span>
+          <span class="tag green">Ref</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;" class="fade-in">
+      <div class="compare-grid">
+        <div class="compare-card">
+          <div class="compare-header">
+            <div class="fw-badge fw-react">R</div>
+            <span>sangtae-react</span>
+            <small>useSyncExternalStore</small>
+          </div>
+          <pre><span class="cm">// useAtom 내부 구현</span>
+<span class="kw">const</span> <span class="nm">value</span> <span class="op">=</span> <span class="fn">useSyncExternalStore</span><span class="plain">(</span>
+  <span class="nm">subscribeAtom</span><span class="plain">,</span>
+  <span class="nm">getSnapshot</span><span class="plain">,</span>
+  <span class="nm">getSnapshot</span><span class="plain">,  </span><span class="cm">// server snapshot</span>
+<span class="plain">);</span>
+<span class="kw">return</span> <span class="plain">[</span><span class="nm">value</span><span class="plain">, </span><span class="nm">setValue</span><span class="plain">];</span></pre>
+        </div>
+        <div class="compare-card">
+          <div class="compare-header">
+            <div class="fw-badge fw-vue">V</div>
+            <span>sangtae-vue</span>
+            <small>Composition API</small>
+          </div>
+          <pre><span class="cm">// useAtom 내부 구현</span>
+<span class="kw">const</span> <span class="nm">value</span> <span class="op">=</span> <span class="fn">ref</span><span class="plain">&lt;</span><span class="ty">T</span><span class="plain">&gt;(</span><span class="fn">get</span><span class="plain">(</span><span class="nm">atom</span><span class="plain">));</span>
+<span class="fn">subscribe</span><span class="plain">(</span><span class="nm">atom</span><span class="plain">, </span><span class="nm">updateValue</span><span class="plain">);</span>
+<span class="fn">onUnmounted</span><span class="plain">(() </span><span class="op">=&gt;</span> <span class="fn">unsubscribe</span><span class="plain">());</span>
+<span class="kw">return</span> <span class="plain">[</span><span class="nm">value</span><span class="plain">, </span><span class="nm">setValue</span><span class="plain">];</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- STATUS -->
+<section id="status">
+  <div class="container">
+    <p class="section-label fade-in">Status</p>
+    <h2 class="fade-in">구현 현황</h2>
+    <p class="section-desc fade-in">핵심 API부터 선택 기능, 프레임워크 연동, 샘플 앱까지 모두 완료되었습니다.</p>
+
+    <div style="border:1px solid var(--border);border-radius:14px;overflow:hidden;" class="fade-in">
+      <table class="status-table">
+        <thead>
+          <tr>
+            <th>분류</th>
+            <th>항목</th>
+            <th>상태</th>
+            <th style="color:var(--text3)">비고</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">핵심 API</td>
+            <td class="mono-cell">createAtom · get · set · subscribe</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">Object.is 비교로 NaN, ±0 안전 처리</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">파생 Atom</td>
+            <td class="mono-cell">createDerivedAtom</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">의존 atom 자동 추적, 변경 시 재계산</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">비동기 Atom</td>
+            <td class="mono-cell">createAsyncAtom · getAsync</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">Suspense 대응, WeakMap 캐싱</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">React 연동</td>
+            <td class="mono-cell">useAtom (sangtae-react)</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">useSyncExternalStore 기반</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">Vue 연동</td>
+            <td class="mono-cell">useAtom (sangtae-vue)</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">Ref + onUnmounted 기반</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">메모리 관리</td>
+            <td class="mono-cell">Listener GC 처리</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">마지막 구독 해지 시 Set → null</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">배치 업데이트</td>
+            <td class="mono-cell">React Auto Batching 연동</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">별도 배치 API 없이 React와 연동</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">단위 테스트</td>
+            <td class="mono-cell">@sangtae-js Vitest</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">필수/선택 기능 전체 커버</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text2);font-size:13px;">샘플 앱</td>
+            <td class="mono-cell">React + Vue 데모</td>
+            <td><span class="badge-done">완료</span></td>
+            <td style="color:var(--text3);font-size:13px;">동일 시나리오를 두 프레임워크로 제공</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- QUICK START -->
+<section>
+  <div class="container">
+    <p class="section-label fade-in">Quick Start</p>
+    <h2 class="fade-in">30초 안에 시작하기</h2>
+    <p class="section-desc fade-in">npm workspace 기반 모노레포로 구성되어 있습니다. 전체 환경을 한 번에 설치하고 실행하세요.</p>
+
+    <div class="code-section fade-in">
+      <div class="code-tabs">
+        <button class="code-tab active" data-tab="install">설치 및 빌드</button>
+        <button class="code-tab" data-tab="run-react">React 데모</button>
+        <button class="code-tab" data-tab="run-vue">Vue 데모</button>
+        <button class="code-tab" data-tab="test">테스트</button>
+      </div>
+
+      <div id="tab-install" class="code-panel active">
+        <pre><span class="cm"># 1. 의존성 설치 (워크스페이스 전체)</span>
+<span class="plain">npm run install:all</span>
+
+<span class="cm"># 2. sangtae-js, sangtae-react, sangtae-vue 빌드</span>
+<span class="plain">npm run build:all</span></pre>
+      </div>
+
+      <div id="tab-run-react" class="code-panel">
+        <pre><span class="cm"># React + Vite 데모 앱 실행</span>
+<span class="plain">npm run preview:sample-app-react</span>
+
+<span class="cm"># → http://localhost:4173 에서 확인</span>
+<span class="cm"># 카운터, 파생 상태, 비동기 상태, 수동 구독 시나리오 포함</span></pre>
+      </div>
+
+      <div id="tab-run-vue" class="code-panel">
+        <pre><span class="cm"># Vue 3 + Vite 데모 앱 실행</span>
+<span class="plain">npm run preview:sample-app-vue</span>
+
+<span class="cm"># → http://localhost:4174 에서 확인</span>
+<span class="cm"># React 버전과 동일한 시나리오를 Vue 3 컴포넌트로 제공</span></pre>
+      </div>
+
+      <div id="tab-test" class="code-panel">
+        <pre><span class="cm"># @sangtae-js 단위 테스트 (watch mode)</span>
+<span class="plain">npm run test --workspace=@sangtae-js</span>
+
+<span class="cm"># CI 환경 단발 실행</span>
+<span class="plain">npm run test:run --workspace=@sangtae-js</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">sang<span>tae</span></div>
+    <p>상태(狀態) — Minimal Global State Management Library</p>
+    <div class="footer-links">
+      <a href="https://github.com/foreverchoi0706/sangtae" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/foreverchoi0706/sangtae/tree/main/@sangtae-js" target="_blank" rel="noopener">sangtae-js</a>
+      <a href="https://github.com/foreverchoi0706/sangtae/tree/main/@sangtae-react" target="_blank" rel="noopener">sangtae-react</a>
+      <a href="https://github.com/foreverchoi0706/sangtae/tree/main/@sangtae-vue" target="_blank" rel="noopener">sangtae-vue</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.code-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const section = btn.closest('.code-section');
+      const tabName = btn.dataset.tab;
+      section.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+      section.querySelectorAll('.code-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      section.querySelector(`#tab-${tabName}`).classList.add('active');
+    });
+  });
+
+  // Copy install command
+  function copyInstall() {
+    navigator.clipboard.writeText('npm install sangtae-js').then(() => {
+      const btn = document.querySelector('.hero-copy');
+      btn.style.color = 'var(--green)';
+      setTimeout(() => btn.style.color = '', 1200);
+    });
+  }
+
+  // Scroll fade-in
+  const observer = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.1 }
+  );
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
